@@ -99,8 +99,8 @@ export default function LocationSettingsPage() {
             )}
           </div>
           <p className="mt-2 text-[11px] text-white/40">
-            "Synchroniser" envoie ta position à ton backend (PUT /v4/location). Rien
-            n'est envoyé automatiquement.
+            &laquo;&nbsp;Synchroniser&nbsp;&raquo; envoie ta position à ton backend (PUT
+            /v4/location). Rien n&apos;est envoyé automatiquement.
           </p>
         </div>
 

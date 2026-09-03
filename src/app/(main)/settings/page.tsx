@@ -32,10 +32,13 @@ export default function SettingsPage() {
   const setSpotifyFavorites = useSetSpotifyFavoritesMutation(me?.profileId ?? "");
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (me && !draft) setDraft(me);
   }, [me, draft]);
 
   useEffect(() => {
+    // Intentional: reads localStorage, so this must run client-only.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfigState(getConfig());
   }, []);
 

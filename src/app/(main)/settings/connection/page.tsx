@@ -13,6 +13,8 @@ export default function ConnectionSettingsPage() {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
+    // Intentional: reads localStorage, so this must run client-only.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setForm(getConfig());
     setOverridden(hasOverride());
   }, []);

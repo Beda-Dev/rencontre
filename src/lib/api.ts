@@ -60,7 +60,7 @@ let roamState: RoamStatus = { active: false, place: null };
 // In-memory only (mock mode): boost session, mirroring GET /v2/boost/sessions.
 let boostState: BoostStatus = { active: false, type: null, expiresAt: null };
 // In-memory only (mock mode): tap counters, mirroring /v2/taps/received + /v1/interactions/taps/sent.
-let tapStats: TapStats = { sent: 0, received: 17 };
+const tapStats: TapStats = { sent: 0, received: 17 };
 // In-memory only (mock mode): passed Top Picks, mirroring PUT /v1/toppicks/passed/{id}.
 const passedTopPickIds = new Set<string>();
 // In-memory only (mock mode): my active Right Now post, mirroring GET /v3/rightnow/active-post.

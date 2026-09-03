@@ -16,6 +16,8 @@ export default function LoginPage() {
   const [config, setConfigState] = useState<AppConfig | null>(null);
 
   useEffect(() => {
+    // Intentional: reads localStorage, so this must run client-only.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setConfigState(getConfig());
   }, []);
 

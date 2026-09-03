@@ -41,19 +41,21 @@ function saveCached(state: Partial<GeoState>) {
  * the documented cascade endpoint expects (nearbyGeohash query param).
  * Requests permission only when `request()` is called — never automatically.
  */
+const EMPTY_STATE: GeoState = {
+  status: "idle",
+  lat: null,
+  lng: null,
+  geohash: null,
+  accuracy: null,
+  updatedAt: null,
+  error: null,
+};
+
 export function useGeolocation() {
-  const [state, setState] = useState<GeoState>(() => {
-    const cached = loadCached();
-    return {
-      status: "idle",
-      lat: cached?.lat ?? null,
-      lng: cached?.lng ?? null,
-      geohash: cached?.geohash ?? null,
-      accuracy: cached?.accuracy ?? null,
-      updatedAt: cached?.updatedAt ?? null,
-      error: null,
-    };
-  });
+  // Deterministic default on both server and first client render — avoids a
+  // hydration mismatch. The cached position (client-only) is applied after
+  // mount, below.
+  const [state, setState] = useState<GeoState>(EMPTY_STATE);
 
   const request = useCallback(() => {
     if (typeof navigator === "undefined" || !("geolocation" in navigator)) {
@@ -87,11 +89,23 @@ export function useGeolocation() {
     );
   }, []);
 
-  // Auto-retry silently from cache on mount so a page refresh doesn't lose
-  // the last known position; does not itself trigger a permission prompt.
+  // Load the last known position from cache after mount (client-only, so
+  // this can't run during the shared server/client first render) — restores
+  // it silently on a page refresh without triggering a permission prompt.
   useEffect(() => {
-    if (state.geohash) setState((s) => ({ ...s, status: "granted" }));
-  }, [state.geohash]);
+    const cached = loadCached();
+    if (!cached?.geohash) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setState((s) => ({
+      ...s,
+      status: "granted",
+      lat: cached.lat ?? s.lat,
+      lng: cached.lng ?? s.lng,
+      geohash: cached.geohash ?? s.geohash,
+      accuracy: cached.accuracy ?? s.accuracy,
+      updatedAt: cached.updatedAt ?? s.updatedAt,
+    }));
+  }, []);
 
   return { ...state, request };
 }
