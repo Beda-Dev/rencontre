@@ -7,10 +7,13 @@ import { BackIcon, PinIcon, SearchIcon } from "@/components/icons";
 import { useGeolocation } from "@/lib/useGeolocation";
 import { useUpdateLocationMutation } from "@/lib/queries";
 import {
+  useDeleteTravelPlanMutation,
   useNeighborhoodQuery,
   usePlacesSearchQuery,
   useRoamStatusQuery,
   useSetRoamMutation,
+  useSetTravelPlanMutation,
+  useTravelPlanQuery,
 } from "@/lib/queries";
 import { Place } from "@/lib/types";
 
@@ -33,6 +36,15 @@ export default function LocationSettingsPage() {
   const { data: places, isLoading: searching } = usePlacesSearchQuery(query);
   const { data: neighborhood } = useNeighborhoodQuery(geo.geohash);
 
+  const { data: travelPlan } = useTravelPlanQuery();
+  const setTravelPlan = useSetTravelPlanMutation();
+  const deleteTravelPlan = useDeleteTravelPlanMutation();
+  const [travelQuery, setTravelQuery] = useState("");
+  const { data: travelPlaces } = usePlacesSearchQuery(travelQuery);
+  const [travelPlace, setTravelPlace] = useState<Place | null>(null);
+  const [startDate, setStartDate] = useState("");
+  const [endDate, setEndDate] = useState("");
+
   async function handleRequest() {
     geo.request();
   }
@@ -47,6 +59,19 @@ export default function LocationSettingsPage() {
 
   async function handleSyncLocation() {
     if (geo.geohash) await updateLocation.mutateAsync(geo.geohash);
+  }
+
+  async function handleSaveTravelPlan() {
+    const place = travelPlace ?? (travelPlan ? travelPlan.place : null);
+    if (!place || !startDate || !endDate) return;
+    await setTravelPlan.mutateAsync({
+      place,
+      startDate: new Date(startDate).getTime(),
+      endDate: new Date(endDate).getTime(),
+      showOnProfile: true,
+    });
+    setTravelPlace(null);
+    setTravelQuery("");
   }
 
   return (
@@ -121,6 +146,79 @@ export default function LocationSettingsPage() {
             </button>
           </div>
         )}
+
+        <div className="mt-4 rounded-lg border border-white/10 bg-white/5 p-4">
+          <p className="text-sm font-medium">Voyage planifié</p>
+          <p className="mt-0.5 text-xs text-white/50">
+            Contrairement au Roam (instantané), un voyage a des dates et s&apos;affiche
+            en avance sur ton profil.
+          </p>
+
+          {travelPlan ? (
+            <div className="mt-3 rounded-lg border border-blue-400/30 bg-blue-400/10 p-3 text-sm">
+              <p className="font-medium text-blue-300">
+                ✈️ {travelPlan.place.name}, {travelPlan.place.region}
+              </p>
+              <p className="mt-1 text-xs text-white/50">
+                Du {new Date(travelPlan.startDate).toLocaleDateString("fr-FR")} au{" "}
+                {new Date(travelPlan.endDate).toLocaleDateString("fr-FR")}
+              </p>
+              <button
+                onClick={() => deleteTravelPlan.mutate()}
+                disabled={deleteTravelPlan.isPending}
+                className="mt-2 w-full rounded-lg border border-white/15 py-1.5 text-xs text-white/80 hover:border-white/30"
+              >
+                Annuler le voyage
+              </button>
+            </div>
+          ) : (
+            <div className="mt-3 space-y-2">
+              <input
+                value={travelPlace ? `${travelPlace.name}, ${travelPlace.region}` : travelQuery}
+                onChange={(e) => {
+                  setTravelPlace(null);
+                  setTravelQuery(e.target.value);
+                }}
+                placeholder="Ville de destination…"
+                className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-blue-400"
+              />
+              {travelQuery && !travelPlace && travelPlaces && travelPlaces.length > 0 && (
+                <div className="divide-y divide-white/5 rounded-lg border border-white/10">
+                  {travelPlaces.map((p) => (
+                    <button
+                      key={p.placeId}
+                      onClick={() => setTravelPlace(p)}
+                      className="block w-full px-3 py-2 text-left text-sm hover:bg-white/5"
+                    >
+                      {p.name} <span className="text-xs text-white/40">{p.region}</span>
+                    </button>
+                  ))}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input
+                  type="date"
+                  value={startDate}
+                  onChange={(e) => setStartDate(e.target.value)}
+                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                />
+                <input
+                  type="date"
+                  value={endDate}
+                  onChange={(e) => setEndDate(e.target.value)}
+                  className="flex-1 rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-sm outline-none focus:border-blue-400"
+                />
+              </div>
+              <button
+                onClick={handleSaveTravelPlan}
+                disabled={!travelPlace || !startDate || !endDate || setTravelPlan.isPending}
+                className="w-full rounded-lg bg-blue-400 py-2 text-sm font-medium text-black disabled:opacity-40"
+              >
+                Planifier le voyage
+              </button>
+            </div>
+          )}
+        </div>
 
         <div className="mt-4">
           <label className="mb-1 block text-xs text-white/40">

@@ -7,15 +7,25 @@ import { useRouter } from "next/navigation";
 import { api, mediaUrl } from "@/lib/api";
 import {
   useBlockUserMutation,
+  useHideProfileMutation,
   useManagedFieldsQuery,
   useProfileQuery,
+  useReportProfileMutation,
   useSetFavoriteNoteMutation,
   useSpotifyFavoritesQuery,
   useToggleFavoriteMutation,
 } from "@/lib/queries";
 import { ManagedFields } from "@/lib/types";
 import { formatLastSeen } from "@/lib/format";
-import { BackIcon, BlockIcon, ChatIcon, MusicIcon, StarIcon } from "@/components/icons";
+import {
+  BackIcon,
+  BlockIcon,
+  ChatIcon,
+  EyeIcon,
+  FlagIcon,
+  MusicIcon,
+  StarIcon,
+} from "@/components/icons";
 import ImageViewer from "@/components/ImageViewer";
 
 function fieldName(fields: ManagedFields[keyof ManagedFields], id: number | null) {
@@ -31,18 +41,21 @@ export default function ProfileDetailPage(props: PageProps<"/profile/[id]">) {
   const toggleFavorite = useToggleFavoriteMutation();
   const setFavoriteNote = useSetFavoriteNoteMutation();
   const blockUser = useBlockUserMutation();
+  const hideProfile = useHideProfileMutation();
+  const reportProfile = useReportProfileMutation();
   const { data: tracks } = useSpotifyFavoritesQuery(id);
   const [blocked, setBlocked] = useState(false);
+  const [hidden, setHidden] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
 
   if (profileLoading || fieldsLoading || !profile || !fields) {
     return <p className="px-4 py-10 text-center text-sm text-white/50">Chargement…</p>;
   }
 
-  if (blocked) {
+  if (blocked || hidden) {
     return (
       <p className="px-4 py-10 text-center text-sm text-white/50">
-        Profil bloqué. Retour à la grille…
+        {blocked ? "Profil bloqué." : "Profil masqué."} Retour à la grille…
       </p>
     );
   }
@@ -52,6 +65,18 @@ export default function ProfileDetailPage(props: PageProps<"/profile/[id]">) {
     await blockUser.mutateAsync(profile!.profileId);
     setBlocked(true);
     setTimeout(() => router.push("/"), 900);
+  }
+
+  async function handleHide() {
+    await hideProfile.mutateAsync(profile!.profileId);
+    setHidden(true);
+    setTimeout(() => router.push("/"), 900);
+  }
+
+  async function handleReport() {
+    if (!window.confirm(`Signaler ${profile!.displayName ?? "ce profil"} ?`)) return;
+    await reportProfile.mutateAsync({ profileId: profile!.profileId, reason: 3, comment: "Spam" });
+    window.alert("Signalement envoyé.");
   }
 
   const photoHashes = [
@@ -187,14 +212,34 @@ export default function ProfileDetailPage(props: PageProps<"/profile/[id]">) {
         <Field label="Taille" value={profile.height > 0 ? `${profile.height} cm` : null} />
       </dl>
 
-      <button
-        onClick={handleBlock}
-        disabled={blockUser.isPending}
-        className="mx-4 mb-8 flex items-center justify-center gap-2 rounded-lg border border-red-400/30 py-2.5 text-sm text-red-400 hover:bg-red-400/10 disabled:opacity-50"
-      >
-        <BlockIcon className="h-4 w-4" />
-        Bloquer
-      </button>
+      <div className="mx-4 mb-8 space-y-2">
+        <div className="flex gap-2">
+          <button
+            onClick={handleHide}
+            disabled={hideProfile.isPending}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-white/15 py-2.5 text-sm text-white/70 hover:border-white/30 disabled:opacity-50"
+          >
+            <EyeIcon className="h-4 w-4" />
+            Masquer
+          </button>
+          <button
+            onClick={handleReport}
+            disabled={reportProfile.isPending}
+            className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-orange-400/30 py-2.5 text-sm text-orange-300 hover:bg-orange-400/10 disabled:opacity-50"
+          >
+            <FlagIcon className="h-4 w-4" />
+            Signaler
+          </button>
+        </div>
+        <button
+          onClick={handleBlock}
+          disabled={blockUser.isPending}
+          className="flex w-full items-center justify-center gap-2 rounded-lg border border-red-400/30 py-2.5 text-sm text-red-400 hover:bg-red-400/10 disabled:opacity-50"
+        >
+          <BlockIcon className="h-4 w-4" />
+          Bloquer
+        </button>
+      </div>
 
       {viewerIndex !== null && (
         <ImageViewer

@@ -7,7 +7,7 @@ import ProfileGrid from "@/components/ProfileGrid";
 import { useCascadeQuery } from "@/lib/queries";
 import { useGeolocation } from "@/lib/useGeolocation";
 import { useEffectiveLocation } from "@/lib/useEffectiveLocation";
-import { PhotoIcon } from "@/components/icons";
+import { PhotoIcon, SearchIcon } from "@/components/icons";
 import DiscoverTabs from "@/components/DiscoverTabs";
 
 function FilterChip({
@@ -54,6 +54,13 @@ export default function CascadePage() {
         title="Meets"
         right={
           <div className="flex items-center gap-2">
+            <Link
+              href="/search"
+              className="rounded-full border border-white/15 p-1.5 text-white/70 hover:border-white/30"
+              title="Rechercher"
+            >
+              <SearchIcon className="h-4 w-4" />
+            </Link>
             <FilterChip active={photoOnly} onClick={() => setPhotoOnly((v) => !v)}>
               <PhotoIcon className="h-3.5 w-3.5" />
               Photos

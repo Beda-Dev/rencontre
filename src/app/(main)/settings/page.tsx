@@ -16,7 +16,18 @@ import {
   useUploadProfilePhotoMutation,
 } from "@/lib/queries";
 import { MyProfile } from "@/lib/types";
-import { BoltIcon, CameraIcon, MusicIcon, PinIcon, PlugIcon, UsersIcon } from "@/components/icons";
+import {
+  AppIconGlyph,
+  BoltIcon,
+  CameraIcon,
+  EyeIcon,
+  LockIcon,
+  MusicIcon,
+  PinIcon,
+  PlugIcon,
+  UserIcon,
+  UsersIcon,
+} from "@/components/icons";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -215,6 +226,50 @@ export default function SettingsPage() {
           Localisation
         </span>
         <span className="text-xs text-white/50">GPS · Roam</span>
+      </Link>
+
+      <Link
+        href="/settings/account"
+        className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
+      >
+        <span className="flex items-center gap-2">
+          <UserIcon className="h-4 w-4 text-blue-400" />
+          Compte
+        </span>
+        <span className="text-xs text-white/50">Email · mot de passe</span>
+      </Link>
+
+      <Link
+        href="/settings/privacy"
+        className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
+      >
+        <span className="flex items-center gap-2">
+          <EyeIcon className="h-4 w-4 text-blue-400" />
+          Confidentialité
+        </span>
+        <span className="text-xs text-white/50">Bloqués · masqués</span>
+      </Link>
+
+      <Link
+        href="/settings/security"
+        className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
+      >
+        <span className="flex items-center gap-2">
+          <LockIcon className="h-4 w-4 text-blue-400" />
+          Sécurité
+        </span>
+        <span className="text-xs text-white/50">Verrouillage</span>
+      </Link>
+
+      <Link
+        href="/settings/appearance"
+        className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
+      >
+        <span className="flex items-center gap-2">
+          <AppIconGlyph className="h-4 w-4 text-blue-400" />
+          Apparence
+        </span>
+        <span className="text-xs text-white/50">Icône discrète</span>
       </Link>
 
       <Link
