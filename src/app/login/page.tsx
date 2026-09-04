@@ -2,9 +2,10 @@
 
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { api } from "@/lib/api";
-import { AppConfig, getConfig } from "@/lib/config";
-import { GoogleIcon, PinFlameLogo } from "@/components/icons";
+import { AppConfig, getConfig, setConfig } from "@/lib/config";
+import { GoogleIcon, PinFlameLogo, PlugIcon } from "@/components/icons";
 
 export default function LoginPage() {
   const router = useRouter();
@@ -58,6 +59,23 @@ export default function LoginPage() {
             ? "Mode démo — données factices, aucun réseau réel."
             : `Connecté à ${config.apiBaseUrl || "(base URL non configurée)"}`)}
       </p>
+      <div className="mt-1.5 flex items-center gap-3 text-xs">
+        <Link
+          href="/settings/connection"
+          className="flex items-center gap-1 text-white/40 underline hover:text-white/70"
+        >
+          <PlugIcon className="h-3 w-3" />
+          Configurer la connexion API
+        </Link>
+        {config && !config.useMock && (
+          <button
+            onClick={() => setConfigState(setConfig({ useMock: true }))}
+            className="text-amber-400 underline hover:text-amber-300"
+          >
+            Repasser en mode démo
+          </button>
+        )}
+      </div>
 
       <form onSubmit={handleSubmit} className="mt-8 w-full max-w-sm space-y-3">
         <div>

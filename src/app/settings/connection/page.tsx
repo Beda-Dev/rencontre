@@ -1,9 +1,16 @@
 "use client";
 
+// Deliberately NOT under (main) — that group requires being authenticated,
+// which creates a dead end: switch to the real API without a working
+// backend yet, fail to log in, and there'd be no way back in to revert.
+// This page must stay reachable whether or not you're logged in.
+
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import TopBar from "@/components/TopBar";
 import { BackIcon } from "@/components/icons";
+import { api } from "@/lib/api";
 import { AppConfig, getConfig, hasOverride, resetConfig, setConfig } from "@/lib/config";
 
 export default function ConnectionSettingsPage() {
@@ -34,6 +41,11 @@ export default function ConnectionSettingsPage() {
     setOverridden(false);
   }
 
+  function handleBack() {
+    if (window.history.length > 1) router.back();
+    else router.push(api.isAuthenticated() ? "/settings" : "/login");
+  }
+
   if (!form) {
     return <p className="px-4 py-10 text-center text-sm text-white/50">Chargement…</p>;
   }
@@ -43,7 +55,7 @@ export default function ConnectionSettingsPage() {
       <TopBar
         title="Connexion API"
         right={
-          <button onClick={() => router.back()} className="p-1">
+          <button onClick={handleBack} className="p-1">
             <BackIcon className="h-5 w-5" />
           </button>
         }
@@ -109,6 +121,13 @@ export default function ConnectionSettingsPage() {
           dans <code className="text-white/70">.env.local</code>.
         </p>
       </div>
+
+      <Link
+        href="/login"
+        className="mx-4 mt-4 block text-center text-xs text-white/40 underline hover:text-white/70"
+      >
+        Retour à la connexion
+      </Link>
     </div>
   );
 }
