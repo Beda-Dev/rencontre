@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
 import PageTransition from "@/components/PageTransition";
 import NotificationProvider from "@/components/NotificationProvider";
+import AppLockProvider from "@/components/AppLockProvider";
 import { api } from "@/lib/api";
 
 export default function MainLayout({ children }: LayoutProps<"/">) {
@@ -25,10 +26,12 @@ export default function MainLayout({ children }: LayoutProps<"/">) {
   if (!ready) return null;
 
   return (
-    <div className="flex min-h-screen flex-col pb-16">
-      <NotificationProvider />
-      <PageTransition>{children}</PageTransition>
-      <BottomNav />
-    </div>
+    <AppLockProvider>
+      <div className="flex min-h-screen flex-col pb-16">
+        <NotificationProvider />
+        <PageTransition>{children}</PageTransition>
+        <BottomNav />
+      </div>
+    </AppLockProvider>
   );
 }

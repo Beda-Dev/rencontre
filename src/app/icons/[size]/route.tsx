@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
-
-export const dynamic = "force-static";
+import { cookies } from "next/headers";
+import { ICON_VARIANT_COOKIE, isIconVariantKey } from "@/lib/iconVariant";
+import { IconGlyph } from "@/lib/iconGlyph";
 
 export async function GET(
   _req: Request,
@@ -9,28 +10,19 @@ export async function GET(
   const { size } = await params;
   const px = Number(size) || 512;
 
-  return new ImageResponse(
-    (
-      <div
-        style={{
-          width: "100%",
-          height: "100%",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          background: "#0b0b0c",
-        }}
-      >
-        <div
-          style={{
-            width: px * 0.56,
-            height: px * 0.56,
-            borderRadius: 9999,
-            background: "#60a5fa",
-          }}
-        />
-      </div>
-    ),
-    { width: px, height: px }
-  );
+  // ?variant= lets settings/appearance preview a variant without switching
+  // it; otherwise this falls back to the cookie used by the real manifest.
+  const url = new URL(_req.url);
+  const requested = url.searchParams.get("variant") ?? undefined;
+  let variant = isIconVariantKey(requested) ? requested : undefined;
+  if (!variant) {
+    const store = await cookies();
+    const raw = store.get(ICON_VARIANT_COOKIE)?.value;
+    variant = isIconVariantKey(raw) ? raw : "default";
+  }
+
+  return new ImageResponse(<IconGlyph variant={variant} size={px} />, {
+    width: px,
+    height: px,
+  });
 }

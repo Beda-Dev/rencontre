@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import PageTransition from "@/components/PageTransition";
+import AppLockProvider from "@/components/AppLockProvider";
 import { api } from "@/lib/api";
 
 export default function ChatThreadLayout({ children }: LayoutProps<"/">) {
@@ -22,5 +23,9 @@ export default function ChatThreadLayout({ children }: LayoutProps<"/">) {
 
   if (!ready) return null;
 
-  return <PageTransition variant="slide">{children}</PageTransition>;
+  return (
+    <AppLockProvider>
+      <PageTransition variant="slide">{children}</PageTransition>
+    </AppLockProvider>
+  );
 }
