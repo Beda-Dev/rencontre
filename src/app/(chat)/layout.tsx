@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import PageTransition from "@/components/PageTransition";
 import { api } from "@/lib/api";
 
 export default function ChatThreadLayout({ children }: LayoutProps<"/">) {
@@ -21,5 +22,5 @@ export default function ChatThreadLayout({ children }: LayoutProps<"/">) {
 
   if (!ready) return null;
 
-  return <>{children}</>;
+  return <PageTransition variant="slide">{children}</PageTransition>;
 }

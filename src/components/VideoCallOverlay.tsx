@@ -76,7 +76,7 @@ export default function VideoCallOverlay({
   const time = `${Math.floor(elapsed / 60)}:${(elapsed % 60).toString().padStart(2, "0")}`;
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black">
+    <div className="overlay-fade-in fixed inset-0 z-50 flex flex-col bg-black">
       <div className="relative flex-1">
         {stream && !cameraOff ? (
           <CameraPreview stream={stream} className="h-full w-full object-cover" />

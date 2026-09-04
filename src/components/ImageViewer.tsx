@@ -26,7 +26,7 @@ export default function ImageViewer({
   }, [index, urls.length, onIndexChange, onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex flex-col bg-black/95">
+    <div className="overlay-fade-in fixed inset-0 z-50 flex flex-col bg-black/95">
       <div className="flex items-center justify-between px-4 py-3">
         <span className="text-xs text-white/60">
           {index + 1} / {urls.length}
@@ -37,7 +37,7 @@ export default function ImageViewer({
       </div>
 
       <div className="relative flex flex-1 items-center justify-center px-4 pb-4">
-        <div className="relative h-full w-full max-w-lg">
+        <div key={index} className="overlay-fade-in relative h-full w-full max-w-lg">
           <Image
             src={urls[index]}
             alt={`Photo ${index + 1}`}

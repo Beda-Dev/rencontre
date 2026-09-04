@@ -126,7 +126,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
                 className="object-cover"
               />
             </div>
-            <p className="flex-1 font-medium">{profile.displayName ?? "—"}</p>
+            <p className="min-w-0 flex-1 truncate font-medium">{profile.displayName ?? "—"}</p>
             <button
               onClick={() => setInCall(true)}
               title="Appel vidéo"

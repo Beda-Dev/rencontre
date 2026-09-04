@@ -64,9 +64,9 @@ export default function BoostPage() {
             key={opt.type}
             onClick={() => startBoost.mutate(opt.type)}
             disabled={startBoost.isPending || (boost?.active && boost.type === opt.type)}
-            className="flex w-full items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-left hover:border-amber-400/40 disabled:opacity-50"
+            className="flex w-full items-center justify-between gap-3 rounded-lg border border-white/10 bg-white/5 p-3 text-left hover:border-amber-400/40 disabled:opacity-50"
           >
-            <span>
+            <span className="min-w-0 flex-1">
               <span className="block text-sm font-medium">{opt.label}</span>
               <span className="block text-xs text-white/50">{opt.desc}</span>
             </span>

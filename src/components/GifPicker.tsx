@@ -17,7 +17,7 @@ export default function GifPicker({
   const { data: gifs, isLoading } = useGifsQuery(query);
 
   return (
-    <div className="absolute inset-x-0 bottom-full z-10 mb-2 rounded-xl border border-white/10 bg-[#141416] p-3 shadow-xl">
+    <div className="overlay-pop-in absolute inset-x-0 bottom-full z-10 mb-2 rounded-xl border border-white/10 bg-[#141416] p-3 shadow-xl">
       <div className="mb-2 flex items-center justify-between">
         <div className="relative flex-1">
           <SearchIcon className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-white/30" />

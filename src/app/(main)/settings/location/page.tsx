@@ -145,14 +145,14 @@ export default function LocationSettingsPage() {
                   key={place.placeId}
                   onClick={() => handleSelectPlace(place)}
                   disabled={setRoam.isPending}
-                  className="flex w-full items-center justify-between px-3 py-2.5 text-left text-sm hover:bg-white/5"
+                  className="flex w-full items-center justify-between gap-2 px-3 py-2.5 text-left text-sm hover:bg-white/5"
                 >
-                  <span>
+                  <span className="min-w-0 flex-1 truncate">
                     {place.name}
                     <span className="ml-1 text-xs text-white/40">{place.region}</span>
                   </span>
                   {roam?.place?.placeId === place.placeId && (
-                    <span className="text-xs text-amber-400">Actif</span>
+                    <span className="shrink-0 text-xs text-amber-400">Actif</span>
                   )}
                 </button>
               ))

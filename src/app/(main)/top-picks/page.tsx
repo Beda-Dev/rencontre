@@ -42,7 +42,7 @@ export default function TopPicksPage() {
                 />
               </Link>
               <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-black/85 to-transparent px-2 pb-2 pt-6">
-                <span className="truncate text-sm font-medium text-white">
+                <span className="min-w-0 flex-1 truncate text-sm font-medium text-white">
                   {p.displayName ?? "—"}
                   {p.showAge && p.age ? `, ${p.age}` : ""}
                 </span>

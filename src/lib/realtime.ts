@@ -12,6 +12,7 @@
 //   the session token as a query param or a first "auth" frame instead).
 
 import { getConfig } from "./config";
+import { MOCK_PROFILES } from "./mockData";
 import { Message } from "./types";
 
 type RealtimeHandler = (message: Message) => void;
@@ -19,6 +20,13 @@ type RealtimeHandler = (message: Message) => void;
 export interface RealtimeConnection {
   close(): void;
 }
+
+export type RealtimeEvent =
+  | { kind: "message"; profileId: string; displayName: string | null; message: Message }
+  | { kind: "tap"; profileId: string; displayName: string | null }
+  | { kind: "view"; profileId: string; displayName: string | null };
+
+type GlobalHandler = (event: RealtimeEvent) => void;
 
 function toWebSocketUrl(apiBaseUrl: string): string | null {
   try {
@@ -75,6 +83,97 @@ export function connectConversation(
       const data = JSON.parse(event.data);
       if (data?.type === "chat" && data.sourceProfileId === profileId) {
         onMessage(data as Message);
+      }
+    } catch {
+      // ignore malformed frames
+    }
+  });
+
+  return { close: () => socket.close() };
+}
+
+/**
+ * App-wide notification stream — new messages, taps, and profile views,
+ * regardless of what page you're on. Same idea as connectConversation
+ * above, just not scoped to a single open thread. Powers the toast stack
+ * (see NotificationProvider) and live-updates the relevant query caches.
+ */
+export function connectGlobalEvents(onEvent: GlobalHandler): RealtimeConnection {
+  const { useMock, apiBaseUrl } = getConfig();
+
+  if (useMock) {
+    let cancelled = false;
+    let timer: ReturnType<typeof setTimeout>;
+    const schedule = () => {
+      const delay = 15000 + Math.random() * 20000;
+      timer = setTimeout(() => {
+        if (cancelled) return;
+        const kinds: RealtimeEvent["kind"][] = ["message", "tap", "view"];
+        const kind = kinds[Math.floor(Math.random() * kinds.length)];
+        // Message senders come from the same pool as existing mock
+        // conversations, so the live update lines up with what the chat
+        // list already shows; taps/views can come from anyone nearby.
+        const pool = kind === "message" ? MOCK_PROFILES.slice(0, 8) : MOCK_PROFILES.slice(0, 12);
+        const profile = pool[Math.floor(Math.random() * pool.length)];
+        if (kind === "message") {
+          onEvent({
+            kind: "message",
+            profileId: profile.profileId,
+            displayName: profile.displayName,
+            message: {
+              messageId: `sim-${Date.now()}`,
+              body: ["Salut 👋", "Toujours dans le coin ?", "😏", "On se voit quand ?"][
+                Math.floor(Math.random() * 4)
+              ],
+              sourceProfileId: profile.profileId,
+              targetProfileId: "1",
+              timestamp: Date.now(),
+              type: "text",
+              media: null,
+              reaction: null,
+              unsent: false,
+            },
+          });
+        } else {
+          onEvent({ kind, profileId: profile.profileId, displayName: profile.displayName });
+        }
+        schedule();
+      }, delay);
+    };
+    schedule();
+    return {
+      close: () => {
+        cancelled = true;
+        clearTimeout(timer);
+      },
+    };
+  }
+
+  const wsUrl = toWebSocketUrl(apiBaseUrl);
+  if (!wsUrl) return { close: () => {} };
+
+  const sessionId =
+    typeof window !== "undefined"
+      ? window.localStorage.getItem("locatr.sessionId")
+      : null;
+  const socket = new WebSocket(
+    `${wsUrl}${sessionId ? `?sessionId=${encodeURIComponent(sessionId)}` : ""}`
+  );
+
+  socket.addEventListener("message", (event) => {
+    try {
+      const data = JSON.parse(event.data);
+      if (data?.type === "chat") {
+        onEvent({
+          kind: "message",
+          profileId: data.sourceProfileId,
+          displayName: data.displayName ?? null,
+          message: data as Message,
+        });
+      } else if (data?.type === "tap") {
+        onEvent({ kind: "tap", profileId: data.profileId, displayName: data.displayName ?? null });
+      } else if (data?.type === "view") {
+        onEvent({ kind: "view", profileId: data.profileId, displayName: data.displayName ?? null });
       }
     } catch {
       // ignore malformed frames

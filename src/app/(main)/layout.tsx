@@ -3,6 +3,8 @@
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import BottomNav from "@/components/BottomNav";
+import PageTransition from "@/components/PageTransition";
+import NotificationProvider from "@/components/NotificationProvider";
 import { api } from "@/lib/api";
 
 export default function MainLayout({ children }: LayoutProps<"/">) {
@@ -24,7 +26,8 @@ export default function MainLayout({ children }: LayoutProps<"/">) {
 
   return (
     <div className="flex min-h-screen flex-col pb-16">
-      {children}
+      <NotificationProvider />
+      <PageTransition>{children}</PageTransition>
       <BottomNav />
     </div>
   );
