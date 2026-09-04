@@ -3,11 +3,44 @@
 import { FormEvent, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import Script from "next/script";
 import { api } from "@/lib/api";
 import { AppConfig, getConfig, setConfig } from "@/lib/config";
 import { useAccountsQuery, useRemoveAccountMutation, useSwitchAccountMutation } from "@/lib/queries";
 import { GoogleIcon, PinFlameLogo, PlugIcon } from "@/components/icons";
 import AccountRow from "@/components/AccountRow";
+
+const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+
+/**
+ * Real Google Identity Services "server auth code" flow — the web
+ * equivalent of the documented mobile flow (GoogleSignInOptions
+ * .requestServerAuthCode). Only talks to accounts.google.com; the
+ * resulting code is then handed to api.loginWithGoogle(), which sends it
+ * to *your* backend (never to Google or Grindr directly from here).
+ */
+function requestGoogleAuthCode(): Promise<string> {
+  return new Promise((resolve, reject) => {
+    if (!GOOGLE_CLIENT_ID) {
+      reject(new Error("NEXT_PUBLIC_GOOGLE_CLIENT_ID is not configured"));
+      return;
+    }
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error("Google SDK not loaded yet"));
+      return;
+    }
+    const client = window.google.accounts.oauth2.initCodeClient({
+      client_id: GOOGLE_CLIENT_ID,
+      scope: "openid email profile",
+      ux_mode: "popup",
+      callback: (response) => {
+        if (response.code) resolve(response.code);
+        else reject(new Error(response.error ?? "No authorization code returned"));
+      },
+    });
+    client.requestCode();
+  });
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -55,10 +88,17 @@ export default function LoginPage() {
     setGoogleLoading(true);
     setError(null);
     try {
-      await api.loginWithGoogle();
+      // In mock mode there's nothing to authenticate against — keep the
+      // instant demo behavior. In real mode, actually run the Google flow.
+      const code = config?.useMock ? "" : await requestGoogleAuthCode();
+      await api.loginWithGoogle(code);
       router.push("/");
     } catch {
-      setError("Connexion Google impossible. Branche ton backend OAuth pour l'activer.");
+      setError(
+        config?.useMock
+          ? "Connexion Google impossible."
+          : "Connexion Google impossible. Vérifie NEXT_PUBLIC_GOOGLE_CLIENT_ID et que ton backend gère /v8/sessions/thirdparty."
+      );
     } finally {
       setGoogleLoading(false);
     }
@@ -183,10 +223,17 @@ export default function LoginPage() {
             {googleLoading ? "Connexion…" : "Continuer avec Google"}
           </button>
           <p className="mt-2 max-w-sm text-center text-[11px] text-white/30">
-            Stub : à brancher sur ton propre backend OAuth (flow tiers documenté,
-            vendor Google).
+            {config?.useMock
+              ? "Mode démo — connexion Google simulée, aucun réseau réel."
+              : GOOGLE_CLIENT_ID
+                ? "Le code Google est envoyé à ton backend (POST /v8/sessions/thirdparty) — c'est lui qui doit l'échanger contre un token."
+                : "NEXT_PUBLIC_GOOGLE_CLIENT_ID non configuré — voir .env.local.example."}
           </p>
         </>
+      )}
+
+      {!config?.useMock && GOOGLE_CLIENT_ID && (
+        <Script src="https://accounts.google.com/gsi/client" strategy="afterInteractive" />
       )}
     </div>
   );
