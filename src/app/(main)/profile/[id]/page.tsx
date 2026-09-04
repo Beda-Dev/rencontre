@@ -9,6 +9,7 @@ import {
   useBlockUserMutation,
   useHideProfileMutation,
   useManagedFieldsQuery,
+  useMeQuery,
   useProfileQuery,
   useReportProfileMutation,
   useSetFavoriteNoteMutation,
@@ -17,6 +18,8 @@ import {
 } from "@/lib/queries";
 import { ManagedFields } from "@/lib/types";
 import { formatLastSeen } from "@/lib/format";
+import { ai, myProfileContext, toProfileContext } from "@/lib/ai";
+import { getAiSettings } from "@/lib/aiSettings";
 import {
   BackIcon,
   BlockIcon,
@@ -24,6 +27,7 @@ import {
   EyeIcon,
   FlagIcon,
   MusicIcon,
+  SparkleIcon,
   StarIcon,
 } from "@/components/icons";
 import ImageViewer from "@/components/ImageViewer";
@@ -38,6 +42,7 @@ export default function ProfileDetailPage(props: PageProps<"/profile/[id]">) {
   const router = useRouter();
   const { data: profile, isLoading: profileLoading } = useProfileQuery(id);
   const { data: fields, isLoading: fieldsLoading } = useManagedFieldsQuery();
+  const { data: me } = useMeQuery();
   const toggleFavorite = useToggleFavoriteMutation();
   const setFavoriteNote = useSetFavoriteNoteMutation();
   const blockUser = useBlockUserMutation();
@@ -47,6 +52,13 @@ export default function ProfileDetailPage(props: PageProps<"/profile/[id]">) {
   const [blocked, setBlocked] = useState(false);
   const [hidden, setHidden] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const aiSettings = getAiSettings();
+  const [aiSummary, setAiSummary] = useState<{
+    loading: boolean;
+    error: string | null;
+    summary: string;
+    commonPoints: string[];
+  } | null>(null);
 
   if (profileLoading || fieldsLoading || !profile || !fields) {
     return <p className="px-4 py-10 text-center text-sm text-white/50">Chargement…</p>;
@@ -88,6 +100,29 @@ export default function ProfileDetailPage(props: PageProps<"/profile/[id]">) {
   function openAlbum(index: number) {
     setViewerIndex(index);
     api.recordAlbumView(profile!.profileId);
+  }
+
+  async function handleAiSummary() {
+    if (!me) return;
+    setAiSummary({ loading: true, error: null, summary: "", commonPoints: [] });
+    try {
+      const tribeNames = profile!.grindrTribes
+        .map((v) => fieldName(fields!.grindrTribes, v))
+        .filter((v): v is string => Boolean(v));
+      const lookingForNames = profile!.lookingFor
+        .map((v) => fieldName(fields!.lookingFor, v))
+        .filter((v): v is string => Boolean(v));
+      const ctx = toProfileContext(profile!, { tribeNames, lookingForNames, tracks });
+      const res = await ai.profileSummary(ctx, myProfileContext(me));
+      setAiSummary({ loading: false, error: null, summary: res.summary, commonPoints: res.commonPoints });
+    } catch (err) {
+      setAiSummary({
+        loading: false,
+        error: err instanceof Error ? err.message : "Erreur inconnue.",
+        summary: "",
+        commonPoints: [],
+      });
+    }
   }
 
   return (
@@ -167,6 +202,50 @@ export default function ProfileDetailPage(props: PageProps<"/profile/[id]">) {
 
       {profile.aboutMe && (
         <p className="px-4 pb-4 text-sm text-white/80">{profile.aboutMe}</p>
+      )}
+
+      {aiSettings.enabled && aiSettings.profileSummary && me && (
+        <div className="px-4 pb-4">
+          {!aiSummary && (
+            <button
+              onClick={handleAiSummary}
+              className="flex items-center gap-1.5 rounded-lg border border-blue-400/30 bg-blue-400/5 px-3 py-2 text-xs font-medium text-blue-300 hover:bg-blue-400/10"
+            >
+              <SparkleIcon className="h-3.5 w-3.5" />
+              Résumer ce profil avec l&apos;IA
+            </button>
+          )}
+          {aiSummary?.loading && (
+            <div className="space-y-1.5">
+              <div className="h-4 w-full animate-pulse rounded bg-white/5" />
+              <div className="h-4 w-2/3 animate-pulse rounded bg-white/5" />
+            </div>
+          )}
+          {aiSummary && !aiSummary.loading && aiSummary.error && (
+            <p className="text-xs text-red-400">{aiSummary.error}</p>
+          )}
+          {aiSummary && !aiSummary.loading && !aiSummary.error && (
+            <div className="rounded-lg border border-blue-400/20 bg-blue-400/5 p-3 text-sm">
+              <p className="flex items-center gap-1.5 text-xs font-medium text-blue-300">
+                <SparkleIcon className="h-3.5 w-3.5" />
+                Résumé IA
+              </p>
+              <p className="mt-1.5 text-white/80">{aiSummary.summary}</p>
+              {aiSummary.commonPoints.length > 0 && (
+                <div className="mt-2 flex flex-wrap gap-1.5">
+                  {aiSummary.commonPoints.map((p, i) => (
+                    <span
+                      key={i}
+                      className="rounded-full border border-blue-400/30 px-2 py-0.5 text-xs text-blue-300"
+                    >
+                      {p}
+                    </span>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
       )}
 
       {tracks && tracks.length > 0 && (

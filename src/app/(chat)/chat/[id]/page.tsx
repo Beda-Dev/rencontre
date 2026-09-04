@@ -28,6 +28,9 @@ import {
 } from "@/lib/queries";
 import { Message } from "@/lib/types";
 import { useMediaRecorder } from "@/lib/useMediaRecorder";
+import { ai, toChatMessages, toProfileContext } from "@/lib/ai";
+import { getAiSettings } from "@/lib/aiSettings";
+import type { AiScamResult, AiTone } from "@/lib/aiTypes";
 import ChatBubble from "@/components/ChatBubble";
 import ChatMenu from "@/components/ChatMenu";
 import GifPicker from "@/components/GifPicker";
@@ -36,6 +39,9 @@ import SharedMediaSheet from "@/components/SharedMediaSheet";
 import ImageViewer from "@/components/ImageViewer";
 import CameraPreview from "@/components/CameraPreview";
 import VideoCallOverlay from "@/components/VideoCallOverlay";
+import AiSuggestionsSheet from "@/components/AiSuggestionsSheet";
+import AiSummarySheet from "@/components/AiSummarySheet";
+import ScamWarningBanner from "@/components/ScamWarningBanner";
 import {
   BackIcon,
   BlockIcon,
@@ -46,6 +52,7 @@ import {
   MicIcon,
   PhoneIcon,
   SendIcon,
+  SparkleIcon,
   VideoIcon,
 } from "@/components/icons";
 
@@ -79,6 +86,17 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
   const [expiringNext, setExpiringNext] = useState(false);
   const [sharedMediaOpen, setSharedMediaOpen] = useState(false);
   const [viewerIndex, setViewerIndex] = useState<number | null>(null);
+  const aiSettings = getAiSettings();
+  const [aiTone, setAiTone] = useState<AiTone>(aiSettings.tone);
+  const [aiSuggestOpen, setAiSuggestOpen] = useState(false);
+  const [aiSummary, setAiSummary] = useState<{
+    loading: boolean;
+    error: string | null;
+    summary: string | null;
+    facts: string[];
+  } | null>(null);
+  const [scamResult, setScamResult] = useState<AiScamResult | null>(null);
+  const scamCheckedRef = useRef(false);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRecorder = useMediaRecorder("audio");
@@ -110,6 +128,43 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
+
+  useEffect(() => {
+    scamCheckedRef.current = false;
+    // Intentional: resets AI scam-check state when switching threads (the
+    // component instance is reused across the dynamic [id] route param).
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setScamResult(null);
+  }, [id]);
+
+  // Automatic scam check, opt-in, runs once per thread once there's enough
+  // to analyze — never blocks sending, purely informational.
+  useEffect(() => {
+    if (!aiSettings.enabled || !aiSettings.scamCheck || !aiSettings.autoScamCheck) return;
+    if (scamCheckedRef.current || !messages || messages.length < 2) return;
+    scamCheckedRef.current = true;
+    ai.scamCheck(toChatMessages(messages, ME_ID))
+      .then((res) => {
+        if (res.risk !== "none") setScamResult(res);
+      })
+      .catch(() => {});
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [messages]);
+
+  async function handleSummarize() {
+    setAiSummary({ loading: true, error: null, summary: null, facts: [] });
+    try {
+      const res = await ai.conversationSummary(toChatMessages(messages ?? [], ME_ID));
+      setAiSummary({ loading: false, error: null, summary: res.summary, facts: res.facts });
+    } catch (err) {
+      setAiSummary({
+        loading: false,
+        error: err instanceof Error ? err.message : "Erreur inconnue.",
+        summary: null,
+        facts: [],
+      });
+    }
+  }
 
   async function handleSend(e: FormEvent) {
     e.preventDefault();
@@ -203,10 +258,21 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
               onDelete={handleDeleteConversation}
               onReport={handleReport}
               onSharedMedia={() => setSharedMediaOpen(true)}
+              onSummarize={
+                aiSettings.enabled && aiSettings.conversationSummary ? handleSummarize : undefined
+              }
             />
           </>
         )}
       </header>
+
+      {scamResult && scamResult.risk !== "none" && (
+        <ScamWarningBanner
+          risk={scamResult.risk}
+          reasons={scamResult.reasons}
+          onDismiss={() => setScamResult(null)}
+        />
+      )}
 
       <div className="flex-1 space-y-3 overflow-y-auto px-3 py-4">
         {(messages ?? []).map((m) => (
@@ -295,6 +361,16 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
           </div>
         ) : (
           <>
+            {aiSettings.enabled && (aiSettings.replySuggestions || aiSettings.icebreaker) && (
+              <button
+                type="button"
+                onClick={() => setAiSuggestOpen(true)}
+                className="shrink-0 rounded-full p-2 text-white/60 hover:text-blue-400"
+                title="Suggestions IA"
+              >
+                <SparkleIcon className="h-5 w-5" />
+              </button>
+            )}
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
@@ -380,6 +456,36 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
           index={viewerIndex}
           onIndexChange={setViewerIndex}
           onClose={() => setViewerIndex(null)}
+        />
+      )}
+
+      {aiSuggestOpen && profile && (
+        <AiSuggestionsSheet
+          title={
+            (messages ?? []).length === 0 ? "Premier message" : "Suggestions de réponse"
+          }
+          tone={aiTone}
+          onToneChange={setAiTone}
+          onGenerate={async (tone) => {
+            const ctx = toProfileContext(profile);
+            const res =
+              (messages ?? []).length === 0
+                ? await ai.icebreaker(ctx, tone)
+                : await ai.replySuggestions(toChatMessages(messages ?? [], ME_ID), ctx, tone);
+            return res.suggestions;
+          }}
+          onPick={(text) => setDraft(text)}
+          onClose={() => setAiSuggestOpen(false)}
+        />
+      )}
+
+      {aiSummary && (
+        <AiSummarySheet
+          loading={aiSummary.loading}
+          error={aiSummary.error}
+          summary={aiSummary.summary}
+          facts={aiSummary.facts}
+          onClose={() => setAiSummary(null)}
         />
       )}
     </div>

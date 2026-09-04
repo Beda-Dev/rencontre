@@ -16,6 +16,10 @@ import {
   useUploadProfilePhotoMutation,
 } from "@/lib/queries";
 import { MyProfile } from "@/lib/types";
+import { ai } from "@/lib/ai";
+import { getAiSettings } from "@/lib/aiSettings";
+import type { AiBioResult, AiTone } from "@/lib/aiTypes";
+import AiSuggestionsSheet from "@/components/AiSuggestionsSheet";
 import {
   AppIconGlyph,
   BoltIcon,
@@ -25,6 +29,7 @@ import {
   MusicIcon,
   PinIcon,
   PlugIcon,
+  SparkleIcon,
   UserIcon,
   UsersIcon,
 } from "@/components/icons";
@@ -38,6 +43,10 @@ export default function SettingsPage() {
   const [saved, setSaved] = useState(false);
   const [config, setConfigState] = useState<AppConfig | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const aiSettings = getAiSettings();
+  const [bioAiOpen, setBioAiOpen] = useState(false);
+  const [bioTone, setBioTone] = useState<AiTone>(aiSettings.tone);
+  const [bioWarnings, setBioWarnings] = useState<string[]>([]);
   const { data: myTracks } = useSpotifyFavoritesQuery(me?.profileId ?? "");
   const { data: catalog } = useSpotifyCatalogQuery();
   const setSpotifyFavorites = useSetSpotifyFavoritesMutation(me?.profileId ?? "");
@@ -134,13 +143,34 @@ export default function SettingsPage() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-white/60">À propos</label>
+          <div className="mb-1 flex items-center justify-between">
+            <label className="block text-xs text-white/60">À propos</label>
+            {aiSettings.enabled && aiSettings.bioAssistant && (
+              <button
+                type="button"
+                onClick={() => setBioAiOpen(true)}
+                className="flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300"
+              >
+                <SparkleIcon className="h-3.5 w-3.5" />
+                Réécrire avec l&apos;IA
+              </button>
+            )}
+          </div>
           <textarea
             rows={3}
             value={draft.aboutMe}
             onChange={(e) => setDraft({ ...draft, aboutMe: e.target.value })}
             className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-blue-400"
           />
+          {bioWarnings.length > 0 && (
+            <div className="mt-1.5 space-y-1">
+              {bioWarnings.map((w, i) => (
+                <p key={i} className="text-xs text-yellow-300/80">
+                  ⚠ {w}
+                </p>
+              ))}
+            </div>
+          )}
         </div>
         <div className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2.5">
           <span className="text-sm">Afficher mon âge</span>
@@ -273,6 +303,17 @@ export default function SettingsPage() {
       </Link>
 
       <Link
+        href="/settings/ai"
+        className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
+      >
+        <span className="flex items-center gap-2">
+          <SparkleIcon className="h-4 w-4 text-blue-400" />
+          Assistant IA
+        </span>
+        <span className="text-xs text-white/50">Suggestions · style</span>
+      </Link>
+
+      <Link
         href="/settings/connection"
         className="mx-4 mb-6 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
       >
@@ -291,6 +332,21 @@ export default function SettingsPage() {
       >
         Se déconnecter
       </button>
+
+      {bioAiOpen && (
+        <AiSuggestionsSheet
+          title="Réécrire ma bio"
+          tone={bioTone}
+          onToneChange={setBioTone}
+          onGenerate={async (tone) => {
+            const res: AiBioResult = await ai.bioAssistant(draft.aboutMe, tone);
+            setBioWarnings(res.warnings);
+            return res.variants;
+          }}
+          onPick={(text) => setDraft({ ...draft, aboutMe: text })}
+          onClose={() => setBioAiOpen(false)}
+        />
+      )}
     </div>
   );
 }
