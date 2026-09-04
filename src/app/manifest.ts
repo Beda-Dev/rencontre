@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Locatr — prototype (données factices)",
-    short_name: "Locatr",
+    name: "Rencontre — prototype (données factices)",
+    short_name: "Rencontre",
     description: "Prototype d'interface style app de rencontre — données factices",
     start_url: "/",
     scope: "/",

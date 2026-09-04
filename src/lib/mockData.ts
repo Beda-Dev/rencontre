@@ -316,7 +316,7 @@ const ALL_CASCADE: Profile[] = MOCK_PROFILES.map(toCascadeProfile);
 
 export function buildDiscoverSections(): DiscoverSection[] {
   return [
-    { id: "new", title: "Nouveaux sur Locatr", profiles: ALL_CASCADE.slice(0, 6) },
+    { id: "new", title: "Nouveaux sur Rencontre", profiles: ALL_CASCADE.slice(0, 6) },
     {
       id: "online",
       title: "En ligne maintenant",

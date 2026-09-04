@@ -31,13 +31,13 @@ export default function BottomNav() {
               <Link
                 href={href}
                 className={`relative flex flex-col items-center gap-1 py-2.5 text-[11px] transition-colors ${
-                  active ? "text-amber-400" : "text-white/50 hover:text-white/80"
+                  active ? "text-violet-400" : "text-white/50 hover:text-white/80"
                 }`}
               >
                 <span className="relative">
                   <Icon className="h-6 w-6" />
                   {href === "/chat" && unread > 0 && (
-                    <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-amber-400 px-1 text-[9px] font-bold text-black">
+                    <span className="absolute -right-1.5 -top-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-violet-400 px-1 text-[9px] font-bold text-black">
                       {unread}
                     </span>
                   )}

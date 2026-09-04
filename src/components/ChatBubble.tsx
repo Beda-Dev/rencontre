@@ -106,7 +106,7 @@ export default function ChatBubble({
                 ? "overflow-hidden rounded-2xl"
                 : `max-w-[75%] rounded-2xl px-3.5 py-2 text-sm ${
                     mine
-                      ? "rounded-br-sm bg-amber-400 text-black"
+                      ? "rounded-br-sm bg-violet-400 text-black"
                       : "rounded-bl-sm bg-white/10 text-white"
                   }`
           }

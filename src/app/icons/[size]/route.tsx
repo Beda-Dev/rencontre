@@ -26,7 +26,7 @@ export async function GET(
             width: px * 0.56,
             height: px * 0.56,
             borderRadius: 9999,
-            background: "#f5a623",
+            background: "#a78bfa",
           }}
         />
       </div>

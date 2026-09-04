@@ -36,7 +36,7 @@ export default function ChatListItem({ conversation }: { conversation: Conversat
         <p className="truncate text-sm text-white/60">{conversation.lastMessage}</p>
       </div>
       {conversation.unreadCount > 0 && (
-        <span className="ml-1 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-amber-400 px-1 text-[11px] font-semibold text-black">
+        <span className="ml-1 flex h-5 min-w-5 shrink-0 items-center justify-center rounded-full bg-violet-400 px-1 text-[11px] font-semibold text-black">
           {conversation.unreadCount}
         </span>
       )}
