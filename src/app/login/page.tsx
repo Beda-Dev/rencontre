@@ -84,7 +84,7 @@ export default function LoginPage() {
         {config &&
           (config.useMock
             ? "Mode démo — données factices, aucun réseau réel."
-            : `Connecté à ${config.apiBaseUrl || "(base URL non configurée)"}`)}
+            : `Connecté à tes donné reelses `)}
       </p>
       <div className="mt-1.5 flex items-center gap-3 text-xs">
         <Link

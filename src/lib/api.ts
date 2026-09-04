@@ -136,12 +136,18 @@ function setSessionId(id: string | null) {
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const { apiBaseUrl } = getConfig();
   const sessionId = getSessionId();
-  const res = await fetch(`${apiBaseUrl}${path}`, {
+  // Routed through our own same-origin proxy (app/api/proxy/[...path]) so
+  // the browser never makes a cross-origin request to your backend — that
+  // sidesteps CORS entirely instead of requiring your backend to send
+  // Access-Control-Allow-Origin headers. The proxy reads the real target
+  // from X-Proxy-Target and forwards server-to-server.
+  const res = await fetch(`/api/proxy${path}`, {
     ...init,
     headers: {
       "Content-Type": "application/json",
       // Documented auth scheme: literal "Grindr3 " prefix + Session ID (JWT).
       ...(sessionId ? { Authorization: `Grindr3 ${sessionId}` } : {}),
+      "X-Proxy-Target": apiBaseUrl,
       ...init?.headers,
     },
   });

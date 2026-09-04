@@ -90,8 +90,10 @@ export default function ConnectionSettingsPage() {
             className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-blue-400 disabled:opacity-40"
           />
           <p className="mt-1.5 text-xs text-white/40">
-            Doit pointer vers ton propre serveur/proxy — jamais directement vers une
-            API tierce privée depuis le navigateur.
+            Doit pointer vers ton propre serveur — jamais directement vers une API
+            tierce privée depuis le navigateur. Les requêtes passent par le proxy
+            interne de cette app (<code className="text-white/60">/api/proxy</code>),
+            donc pas besoin de configurer CORS sur ton backend.
           </p>
         </div>
 
