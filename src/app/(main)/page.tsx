@@ -24,7 +24,7 @@ function FilterChip({
       onClick={onClick}
       className={`flex items-center gap-1 rounded-full border px-3 py-1 text-xs font-medium transition ${
         active
-          ? "border-violet-400 bg-violet-400 text-black"
+          ? "border-blue-400 bg-blue-400 text-black"
           : "border-white/15 text-white/70 hover:border-white/30"
       }`}
     >
@@ -69,7 +69,7 @@ export default function CascadePage() {
       {location.source === "roam" && (
         <Link
           href="/settings/location"
-          className="flex items-center justify-between border-b border-violet-400/20 bg-violet-400/10 px-4 py-2 text-xs text-violet-300"
+          className="flex items-center justify-between border-b border-blue-400/20 bg-blue-400/10 px-4 py-2 text-xs text-blue-300"
         >
           <span>📍 En roaming à {location.label}</span>
           <span className="underline">Gérer</span>
@@ -85,7 +85,7 @@ export default function CascadePage() {
           </span>
           <button
             onClick={geo.request}
-            className="shrink-0 rounded-full bg-violet-400 px-3 py-1 font-medium text-black"
+            className="shrink-0 rounded-full bg-blue-400 px-3 py-1 font-medium text-black"
           >
             Activer
           </button>

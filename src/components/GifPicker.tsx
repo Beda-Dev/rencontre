@@ -26,7 +26,7 @@ export default function GifPicker({
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Chercher un GIF…"
-            className="w-full rounded-full border border-white/10 bg-white/5 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-violet-400"
+            className="w-full rounded-full border border-white/10 bg-white/5 py-1.5 pl-8 pr-3 text-xs outline-none focus:border-blue-400"
           />
         </div>
         <button onClick={onClose} className="ml-2 text-xs text-white/40 hover:text-white">
@@ -41,7 +41,7 @@ export default function GifPicker({
             <button
               key={gif.id}
               onClick={() => onPick(gif)}
-              className="relative aspect-[4/3] overflow-hidden rounded-lg bg-white/5 hover:ring-2 hover:ring-violet-400"
+              className="relative aspect-[4/3] overflow-hidden rounded-lg bg-white/5 hover:ring-2 hover:ring-blue-400"
             >
               <Image src={gif.previewUrl} alt={gif.id} fill unoptimized className="object-cover" />
             </button>

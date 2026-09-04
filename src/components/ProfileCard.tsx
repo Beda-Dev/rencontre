@@ -39,7 +39,7 @@ export default function ProfileCard({ profile }: { profile: Profile }) {
         onClick={handleTap}
         title={tapped ? "Tap envoyé" : "Envoyer un tap"}
         className={`absolute left-1.5 top-1.5 rounded-full p-1.5 backdrop-blur transition ${
-          tapped ? "bg-violet-400 text-black" : "bg-black/50 text-white hover:bg-black/70"
+          tapped ? "bg-blue-400 text-black" : "bg-black/50 text-white hover:bg-black/70"
         }`}
       >
         <WaveIcon className="h-3.5 w-3.5" />

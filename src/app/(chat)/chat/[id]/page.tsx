@@ -130,7 +130,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
             <button
               onClick={() => setInCall(true)}
               title="Appel vidéo"
-              className="p-1.5 text-white/50 hover:text-violet-400"
+              className="p-1.5 text-white/50 hover:text-blue-400"
             >
               <PhoneIcon className="h-5 w-5" />
             </button>
@@ -178,7 +178,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
               </button>
               <button
                 onClick={handleStopVideo}
-                className="rounded-full bg-violet-400 px-3 py-1 text-xs font-medium text-black"
+                className="rounded-full bg-blue-400 px-3 py-1 text-xs font-medium text-black"
               >
                 Envoyer
               </button>
@@ -223,7 +223,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
             <button
               type="button"
               onClick={handleStopAudio}
-              className="rounded-full bg-violet-400 p-1.5 text-black"
+              className="rounded-full bg-blue-400 p-1.5 text-black"
             >
               <SendIcon className="h-3.5 w-3.5" />
             </button>
@@ -233,7 +233,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
             <button
               type="button"
               onClick={() => fileInputRef.current?.click()}
-              className="shrink-0 rounded-full p-2 text-white/60 hover:text-violet-400"
+              className="shrink-0 rounded-full p-2 text-white/60 hover:text-blue-400"
               title="Envoyer une photo"
             >
               <CameraIcon className="h-5 w-5" />
@@ -241,7 +241,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
             <button
               type="button"
               onClick={() => setGifPickerOpen((v) => !v)}
-              className="shrink-0 rounded-full p-2 text-white/60 hover:text-violet-400"
+              className="shrink-0 rounded-full p-2 text-white/60 hover:text-blue-400"
               title="Envoyer un GIF"
             >
               <GifIcon className="h-5 w-5" />
@@ -250,13 +250,13 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
               value={draft}
               onChange={(e) => setDraft(e.target.value)}
               placeholder="Message…"
-              className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-violet-400"
+              className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-blue-400"
             />
             {draft.trim() ? (
               <button
                 type="submit"
                 disabled={sendMessage.isPending}
-                className="shrink-0 rounded-full bg-violet-400 p-2.5 text-black disabled:opacity-40"
+                className="shrink-0 rounded-full bg-blue-400 p-2.5 text-black disabled:opacity-40"
               >
                 <SendIcon className="h-4 w-4" />
               </button>
@@ -265,7 +265,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
                 <button
                   type="button"
                   onClick={() => videoRecorder.start()}
-                  className="shrink-0 rounded-full p-2 text-white/60 hover:text-violet-400"
+                  className="shrink-0 rounded-full p-2 text-white/60 hover:text-blue-400"
                   title="Message vidéo"
                 >
                   <VideoIcon className="h-5 w-5" />
@@ -273,7 +273,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
                 <button
                   type="button"
                   onClick={() => audioRecorder.start()}
-                  className="shrink-0 rounded-full p-2 text-white/60 hover:text-violet-400"
+                  className="shrink-0 rounded-full p-2 text-white/60 hover:text-blue-400"
                   title="Message vocal"
                 >
                   <MicIcon className="h-5 w-5" />

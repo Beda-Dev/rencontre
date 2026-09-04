@@ -63,7 +63,7 @@ export default function LocationSettingsPage() {
       <div className="px-4 py-4">
         <div className="rounded-lg border border-white/10 bg-white/5 p-4">
           <div className="flex items-center gap-2">
-            <PinIcon className="h-5 w-5 text-violet-400" />
+            <PinIcon className="h-5 w-5 text-blue-400" />
             <p className="text-sm font-medium">{STATUS_LABEL[geo.status]}</p>
           </div>
 
@@ -84,7 +84,7 @@ export default function LocationSettingsPage() {
             <button
               onClick={handleRequest}
               disabled={geo.status === "prompting"}
-              className="flex-1 rounded-lg bg-violet-400 py-2 text-sm font-medium text-black disabled:opacity-60"
+              className="flex-1 rounded-lg bg-blue-400 py-2 text-sm font-medium text-black disabled:opacity-60"
             >
               {geo.status === "granted" ? "Actualiser" : "Activer ma position"}
             </button>
@@ -105,8 +105,8 @@ export default function LocationSettingsPage() {
         </div>
 
         {roam?.active && roam.place && (
-          <div className="mt-4 rounded-lg border border-violet-400/30 bg-violet-400/10 p-4">
-            <p className="text-sm font-medium text-violet-300">
+          <div className="mt-4 rounded-lg border border-blue-400/30 bg-blue-400/10 p-4">
+            <p className="text-sm font-medium text-blue-300">
               📍 En roaming à {roam.place.name}, {roam.place.region}
             </p>
             <p className="mt-1 text-xs text-white/50">
@@ -132,7 +132,7 @@ export default function LocationSettingsPage() {
               value={query}
               onChange={(e) => setQuery(e.target.value)}
               placeholder="Chercher une ville…"
-              className="w-full rounded-lg border border-white/10 bg-white/5 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-violet-400"
+              className="w-full rounded-lg border border-white/10 bg-white/5 py-2.5 pl-9 pr-3 text-sm outline-none focus:border-blue-400"
             />
           </div>
 
@@ -152,7 +152,7 @@ export default function LocationSettingsPage() {
                     <span className="ml-1 text-xs text-white/40">{place.region}</span>
                   </span>
                   {roam?.place?.placeId === place.placeId && (
-                    <span className="shrink-0 text-xs text-violet-400">Actif</span>
+                    <span className="shrink-0 text-xs text-blue-400">Actif</span>
                   )}
                 </button>
               ))

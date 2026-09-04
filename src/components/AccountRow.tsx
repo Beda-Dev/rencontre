@@ -20,7 +20,7 @@ export default function AccountRow({
   return (
     <div
       className={`flex items-center gap-3 rounded-lg border px-3 py-2.5 transition ${
-        active ? "border-violet-400/40 bg-violet-400/10" : "border-white/10 bg-white/5"
+        active ? "border-blue-400/40 bg-blue-400/10" : "border-white/10 bg-white/5"
       }`}
     >
       <button
@@ -42,7 +42,7 @@ export default function AccountRow({
           <p className="truncate text-xs text-white/40">{account.email}</p>
         </div>
         {active && (
-          <span className="shrink-0 rounded-full bg-violet-400 px-2 py-0.5 text-[10px] font-medium text-black">
+          <span className="shrink-0 rounded-full bg-blue-400 px-2 py-0.5 text-[10px] font-medium text-black">
             Actif
           </span>
         )}

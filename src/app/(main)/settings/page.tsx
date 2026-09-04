@@ -119,7 +119,7 @@ export default function SettingsPage() {
           <input
             value={draft.displayName}
             onChange={(e) => setDraft({ ...draft, displayName: e.target.value })}
-            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-violet-400"
+            className="w-full rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-blue-400"
           />
         </div>
         <div>
@@ -128,7 +128,7 @@ export default function SettingsPage() {
             rows={3}
             value={draft.aboutMe}
             onChange={(e) => setDraft({ ...draft, aboutMe: e.target.value })}
-            className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-violet-400"
+            className="w-full resize-none rounded-lg border border-white/10 bg-white/5 px-3 py-2.5 text-sm outline-none focus:border-blue-400"
           />
         </div>
         <div className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2.5">
@@ -137,7 +137,7 @@ export default function SettingsPage() {
             type="checkbox"
             checked={draft.showAge}
             onChange={(e) => setDraft({ ...draft, showAge: e.target.checked })}
-            className="h-4 w-4 accent-violet-400"
+            className="h-4 w-4 accent-blue-400"
           />
         </div>
         <div className="flex items-center justify-between rounded-lg border border-white/10 px-3 py-2.5">
@@ -146,14 +146,14 @@ export default function SettingsPage() {
             type="checkbox"
             checked={draft.showDistance}
             onChange={(e) => setDraft({ ...draft, showDistance: e.target.checked })}
-            className="h-4 w-4 accent-violet-400"
+            className="h-4 w-4 accent-blue-400"
           />
         </div>
 
         <button
           type="submit"
           disabled={updateMe.isPending}
-          className="w-full rounded-lg bg-violet-400 py-2.5 text-sm font-semibold text-black hover:bg-violet-300 disabled:opacity-60"
+          className="w-full rounded-lg bg-blue-400 py-2.5 text-sm font-semibold text-black hover:bg-blue-300 disabled:opacity-60"
         >
           {updateMe.isPending ? "Enregistrement…" : saved ? "Enregistré ✓" : "Enregistrer"}
         </button>
@@ -173,7 +173,7 @@ export default function SettingsPage() {
                 onClick={() => toggleTrack(track.id)}
                 className={`rounded-full border px-2.5 py-1 text-xs transition ${
                   active
-                    ? "border-violet-400 bg-violet-400/10 text-violet-400"
+                    ? "border-blue-400 bg-blue-400/10 text-blue-400"
                     : "border-white/15 text-white/60 hover:border-white/30"
                 }`}
               >
@@ -189,7 +189,7 @@ export default function SettingsPage() {
         className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
       >
         <span className="flex items-center gap-2">
-          <UsersIcon className="h-4 w-4 text-violet-400" />
+          <UsersIcon className="h-4 w-4 text-blue-400" />
           Comptes
         </span>
         <span className="text-xs text-white/50">Basculer</span>
@@ -200,7 +200,7 @@ export default function SettingsPage() {
         className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
       >
         <span className="flex items-center gap-2">
-          <BoltIcon className="h-4 w-4 text-violet-400" />
+          <BoltIcon className="h-4 w-4 text-blue-400" />
           Boost
         </span>
         <span className="text-xs text-white/50">Visibilité</span>
@@ -211,7 +211,7 @@ export default function SettingsPage() {
         className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
       >
         <span className="flex items-center gap-2">
-          <PinIcon className="h-4 w-4 text-violet-400" />
+          <PinIcon className="h-4 w-4 text-blue-400" />
           Localisation
         </span>
         <span className="text-xs text-white/50">GPS · Roam</span>
@@ -222,7 +222,7 @@ export default function SettingsPage() {
         className="mx-4 mb-6 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
       >
         <span className="flex items-center gap-2">
-          <PlugIcon className="h-4 w-4 text-violet-400" />
+          <PlugIcon className="h-4 w-4 text-blue-400" />
           Connexion API
         </span>
         <span className="text-xs text-white/50">

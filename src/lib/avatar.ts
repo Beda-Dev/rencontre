@@ -2,7 +2,7 @@
 // so mock profiles never depend on external images or depict real people.
 
 const PALETTE = [
-  "#a78bfa",
+  "#60a5fa",
   "#e8590c",
   "#c2255c",
   "#7048e8",

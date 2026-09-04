@@ -44,9 +44,9 @@ export default function RightNowPage() {
 
       <div className="px-4 py-3">
         {mine ? (
-          <div className="rounded-lg border border-violet-400/30 bg-violet-400/10 p-3">
-            <p className="text-sm text-violet-200">{mine.text}</p>
-            <div className="mt-2 flex items-center justify-between text-xs text-violet-300/70">
+          <div className="rounded-lg border border-blue-400/30 bg-blue-400/10 p-3">
+            <p className="text-sm text-blue-200">{mine.text}</p>
+            <div className="mt-2 flex items-center justify-between text-xs text-blue-300/70">
               <span>{timeLeft(mine.expiration)}</span>
               <button
                 onClick={() => deletePost.mutate()}
@@ -65,12 +65,12 @@ export default function RightNowPage() {
               onChange={(e) => setText(e.target.value)}
               placeholder="Dispo pour quoi, là maintenant ?"
               maxLength={120}
-              className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-violet-400"
+              className="flex-1 rounded-full border border-white/10 bg-white/5 px-4 py-2 text-sm outline-none focus:border-blue-400"
             />
             <button
               type="submit"
               disabled={createPost.isPending || !text.trim()}
-              className="shrink-0 rounded-full bg-violet-400 px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
+              className="shrink-0 rounded-full bg-blue-400 px-4 py-2 text-sm font-medium text-black disabled:opacity-50"
             >
               Poster
             </button>
