@@ -16,7 +16,7 @@ import {
   useUploadProfilePhotoMutation,
 } from "@/lib/queries";
 import { MyProfile } from "@/lib/types";
-import { BoltIcon, CameraIcon, MusicIcon, PinIcon, PlugIcon } from "@/components/icons";
+import { BoltIcon, CameraIcon, MusicIcon, PinIcon, PlugIcon, UsersIcon } from "@/components/icons";
 
 export default function SettingsPage() {
   const router = useRouter();
@@ -183,6 +183,17 @@ export default function SettingsPage() {
           })}
         </div>
       </div>
+
+      <Link
+        href="/settings/accounts"
+        className="mx-4 mb-3 flex items-center justify-between rounded-lg border border-white/10 bg-white/5 p-3 text-sm hover:border-white/20"
+      >
+        <span className="flex items-center gap-2">
+          <UsersIcon className="h-4 w-4 text-amber-400" />
+          Comptes
+        </span>
+        <span className="text-xs text-white/50">Basculer</span>
+      </Link>
 
       <Link
         href="/settings/boost"

@@ -1,3 +1,17 @@
+export function UsersIcon({ className }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="none" className={className}>
+      <circle cx="9" cy="8" r="3" stroke="currentColor" strokeWidth="1.7" />
+      <path
+        d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6M16 8.5a2.5 2.5 0 100-5M18.5 20c0-2.6-1.6-4.8-4-5.7"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export function BoltIcon({ className }: { className?: string }) {
   return (
     <svg viewBox="0 0 24 24" className={className}>

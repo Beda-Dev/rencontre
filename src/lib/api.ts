@@ -4,6 +4,7 @@ import { getConfig } from "./config";
 import { avatarFor } from "./avatar";
 import {
   buildDiscoverSections,
+  getOrCreateMockAccount,
   MOCK_ALIST,
   MOCK_CONVERSATIONS,
   MOCK_GIFS,
@@ -18,8 +19,18 @@ import {
   MOCK_TOP_PICKS,
   MOCK_VIEWS,
   MOCK_VIP_PROFILES,
+  setActiveMockAccount,
   toCascadeProfile,
 } from "./mockData";
+import {
+  getActiveAccountId,
+  listAccounts,
+  removeAccount as removeSavedAccount,
+  SavedAccount,
+  setActiveAccountId,
+  updateAccountProfile,
+  upsertAccount,
+} from "./accounts";
 import { encodeGeohash, haversineMeters, jitterCoords } from "./geo";
 import { fileToDataUrl } from "./mediaFile";
 import { translateText } from "./translate";
@@ -148,15 +159,31 @@ export const api = {
     return getSessionId() !== null;
   },
 
+  /**
+   * POST /v8/sessions — SessionCreateRequest. On success we also save this
+   * account's authToken locally (see lib/accounts.ts): that's what lets
+   * switchAccount() below start a fresh session later without asking for
+   * the password again, exactly like the documented "every subsequent
+   * session" flow.
+   */
   async login(email: string, _password: string): Promise<void> {
     const { useMock } = getConfig();
     if (useMock) {
       await sleep(DELAY);
-      setSessionId(`mock-session-${email}`);
+      const profile = getOrCreateMockAccount(email);
+      setActiveMockAccount(profile);
+      setSessionId(`mock-session-${profile.profileId}`);
+      upsertAccount({
+        profileId: profile.profileId,
+        email: profile.email,
+        displayName: profile.displayName,
+        profileImageMediaHash: profile.profileImageMediaHash,
+        authToken: `mock-auth-${profile.profileId}`,
+        addedAt: Date.now(),
+      });
+      setActiveAccountId(profile.profileId);
       return;
     }
-    // POST /v8/sessions — SessionCreateRequest requires all five keys
-    // (authToken/token/geohash nullable) even on a fresh email+password login.
     const data = await request<{ sessionId: string; profileId: string; authToken: string }>(
       "/v8/sessions",
       {
@@ -171,6 +198,24 @@ export const api = {
       }
     );
     setSessionId(data.sessionId);
+    upsertAccount({
+      profileId: data.profileId,
+      email,
+      displayName: email,
+      profileImageMediaHash: null,
+      authToken: data.authToken,
+      addedAt: Date.now(),
+    });
+    setActiveAccountId(data.profileId);
+    api
+      .getMe()
+      .then((me) =>
+        updateAccountProfile(data.profileId, {
+          displayName: me.displayName,
+          profileImageMediaHash: me.profileImageMediaHash,
+        })
+      )
+      .catch(() => {});
   },
 
   /**
@@ -183,7 +228,18 @@ export const api = {
     const { useMock } = getConfig();
     if (useMock) {
       await sleep(DELAY);
-      setSessionId("mock-session-google");
+      const profile = getOrCreateMockAccount("google-user@gmail.com");
+      setActiveMockAccount(profile);
+      setSessionId(`mock-session-${profile.profileId}`);
+      upsertAccount({
+        profileId: profile.profileId,
+        email: profile.email,
+        displayName: profile.displayName,
+        profileImageMediaHash: profile.profileImageMediaHash,
+        authToken: `mock-auth-${profile.profileId}`,
+        addedAt: Date.now(),
+      });
+      setActiveAccountId(profile.profileId);
       return;
     }
     const data = await request<{ sessionId: string; profileId: string; authToken: string }>(
@@ -198,6 +254,64 @@ export const api = {
       }
     );
     setSessionId(data.sessionId);
+    upsertAccount({
+      profileId: data.profileId,
+      email: "",
+      displayName: "Compte Google",
+      profileImageMediaHash: null,
+      authToken: data.authToken,
+      addedAt: Date.now(),
+    });
+    setActiveAccountId(data.profileId);
+  },
+
+  /** Lists accounts saved on this device (localStorage) — the account
+   * switcher's data source. Purely local, no request involved. */
+  getAccounts(): SavedAccount[] {
+    return listAccounts();
+  },
+
+  getActiveAccountId(): string | null {
+    return getActiveAccountId();
+  },
+
+  /**
+   * Switches to an already-logged-in account without a password, mirroring
+   * the documented "every subsequent session" flow: POST /v8/sessions with
+   * `{ authToken, email, token: null }` instead of a password.
+   */
+  async switchAccount(profileId: string): Promise<void> {
+    const account = listAccounts().find((a) => a.profileId === profileId);
+    if (!account) throw new Error("Unknown account");
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      const profile = getOrCreateMockAccount(account.email, account.profileId);
+      setActiveMockAccount(profile);
+      setSessionId(`mock-session-${profileId}`);
+      setActiveAccountId(profileId);
+      return;
+    }
+    const data = await request<{ sessionId: string }>("/v8/sessions", {
+      method: "POST",
+      body: JSON.stringify({
+        email: account.email,
+        authToken: account.authToken,
+        password: null,
+        token: null,
+        geohash: null,
+      }),
+    });
+    setSessionId(data.sessionId);
+    setActiveAccountId(profileId);
+  },
+
+  /** Forgets a saved account on this device only — no server call, nothing
+   * documented for "delete account" is involved here. */
+  removeAccount(profileId: string): void {
+    const wasActive = getActiveAccountId() === profileId;
+    removeSavedAccount(profileId);
+    if (wasActive) setSessionId(null);
   },
 
   logout(): void {
@@ -223,12 +337,24 @@ export const api = {
     if (useMock) {
       await sleep(DELAY);
       Object.assign(MOCK_ME, patch);
+      updateAccountProfile(MOCK_ME.profileId, {
+        displayName: MOCK_ME.displayName,
+        profileImageMediaHash: MOCK_ME.profileImageMediaHash,
+      });
       return MOCK_ME;
     }
-    return request<MyProfile>("/v4/me/profile", {
+    const me = await request<MyProfile>("/v4/me/profile", {
       method: "PATCH",
       body: JSON.stringify(patch),
     });
+    const activeId = getActiveAccountId();
+    if (activeId) {
+      updateAccountProfile(activeId, {
+        displayName: me.displayName,
+        profileImageMediaHash: me.profileImageMediaHash,
+      });
+    }
+    return me;
   },
 
   /**
@@ -719,12 +845,15 @@ export const api = {
       await sleep(DELAY);
       const url = await fileToDataUrl(file);
       MOCK_ME.profileImageMediaHash = url;
+      updateAccountProfile(MOCK_ME.profileId, { profileImageMediaHash: url });
       return url;
     }
     const { hash } = await request<{ hash: string }>(
       `/v4/media/upload?thumbCoords=0,0,512,512`,
       { method: "POST", headers: { "Content-Type": file.type }, body: file }
     );
+    const activeId = getActiveAccountId();
+    if (activeId) updateAccountProfile(activeId, { profileImageMediaHash: hash });
     return hash;
   },
 

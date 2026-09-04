@@ -148,16 +148,61 @@ export const MOCK_MANAGED_FIELDS: ManagedFields = {
   ],
 };
 
-export const MOCK_ME: MyProfile = {
-  profileId: "1",
-  email: "demo@example.com",
-  displayName: "Toi",
-  aboutMe: "Modifie ton profil dans Réglages.",
-  age: 28,
-  showAge: true,
-  showDistance: true,
-  profileImageMediaHash: "me",
-};
+// Multi-account (mock mode): one MyProfile per logged-in account, keyed by
+// profileId, so switching accounts shows genuinely different demo data.
+// "1" is the original single-account demo profile, kept for continuity.
+const MOCK_ACCOUNTS = new Map<string, MyProfile>([
+  [
+    "1",
+    {
+      profileId: "1",
+      email: "demo@example.com",
+      displayName: "Toi",
+      aboutMe: "Modifie ton profil dans Réglages.",
+      age: 28,
+      showAge: true,
+      showDistance: true,
+      profileImageMediaHash: "me",
+    },
+  ],
+]);
+
+function hashToId(seed: string): string {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) h = (h << 5) - h + seed.charCodeAt(i);
+  return String(9000 + (Math.abs(h) % 900));
+}
+
+/** Gets (or creates on first login) the mock profile for an account. */
+export function getOrCreateMockAccount(email: string, profileId?: string): MyProfile {
+  const id = profileId ?? hashToId(email.toLowerCase());
+  const existing = MOCK_ACCOUNTS.get(id);
+  if (existing) return existing;
+  const created: MyProfile = {
+    profileId: id,
+    email,
+    displayName: email.split("@")[0] || "Nouveau compte",
+    aboutMe: "Modifie ton profil dans Réglages.",
+    age: 25,
+    showAge: true,
+    showDistance: true,
+    profileImageMediaHash: null,
+  };
+  MOCK_ACCOUNTS.set(id, created);
+  return created;
+}
+
+export function getMockAccount(profileId: string): MyProfile | undefined {
+  return MOCK_ACCOUNTS.get(profileId);
+}
+
+/** Currently active mock account — everything in api.ts that used to read
+ * the single MOCK_ME constant now reads this instead. */
+export let MOCK_ME: MyProfile = MOCK_ACCOUNTS.get("1")!;
+
+export function setActiveMockAccount(profile: MyProfile) {
+  MOCK_ME = profile;
+}
 
 function buildMessages(otherId: string): Message[] {
   return [

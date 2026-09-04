@@ -33,6 +33,7 @@ export const queryKeys = {
   tapStats: ["tapStats"] as const,
   spotify: (profileId: string) => ["spotify", profileId] as const,
   spotifyCatalog: ["spotifyCatalog"] as const,
+  accounts: ["accounts"] as const,
 };
 
 export function useMeQuery() {
@@ -341,5 +342,32 @@ export function useSetSpotifyFavoritesMutation(profileId: string) {
   return useMutation({
     mutationFn: (tracks: SpotifyTrack[]) => api.setSpotifyFavorites(tracks),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.spotify(profileId) }),
+  });
+}
+
+export function useAccountsQuery() {
+  return useQuery({
+    queryKey: queryKeys.accounts,
+    queryFn: async () => api.getAccounts(),
+  });
+}
+
+export function useSwitchAccountMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => api.switchAccount(profileId),
+    onSuccess: () => {
+      // Switching accounts means every cached query belongs to the wrong
+      // user now — drop it all rather than invalidating piecemeal.
+      qc.clear();
+    },
+  });
+}
+
+export function useRemoveAccountMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (profileId: string) => api.removeAccount(profileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.accounts }),
   });
 }
