@@ -4,9 +4,10 @@ import { useState } from "react";
 import Image from "next/image";
 import { Message } from "@/lib/types";
 import { useTranslateMessageMutation } from "@/lib/queries";
-import { TrashIcon } from "./icons";
+import { ClockIcon, TrashIcon } from "./icons";
 
 const QUICK_REACTIONS = ["❤️", "😂", "😮", "😢", "👍"];
+const EXPIRING_VIEW_MS = 8000;
 
 function formatDuration(sec?: number) {
   if (!sec) return "0:00";
@@ -15,7 +16,64 @@ function formatDuration(sec?: number) {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
-function MessageContent({ message }: { message: Message }) {
+function ExpiringImage({
+  message,
+  onViewed,
+}: {
+  message: Message;
+  onViewed: () => void;
+}) {
+  const [revealed, setRevealed] = useState(false);
+
+  if (message.viewed) {
+    return (
+      <div className="flex h-40 w-40 flex-col items-center justify-center gap-1 rounded-xl bg-white/5 text-white/30">
+        <ClockIcon className="h-5 w-5" />
+        <span className="text-[11px]">Photo vue</span>
+      </div>
+    );
+  }
+
+  if (!revealed) {
+    return (
+      <button
+        onClick={() => {
+          setRevealed(true);
+          onViewed();
+          setTimeout(() => setRevealed(false), EXPIRING_VIEW_MS);
+        }}
+        className="flex h-40 w-40 flex-col items-center justify-center gap-1 rounded-xl bg-white/10 text-white/70 hover:bg-white/15"
+      >
+        <ClockIcon className="h-6 w-6" />
+        <span className="text-[11px]">Photo à durée limitée</span>
+        <span className="text-[10px] text-white/40">Toucher pour voir</span>
+      </button>
+    );
+  }
+
+  return (
+    <div className="relative h-40 w-40 overflow-hidden rounded-xl bg-black/20">
+      <Image
+        src={message.media?.url ?? ""}
+        alt="Photo à durée limitée"
+        fill
+        unoptimized
+        className="object-cover"
+      />
+    </div>
+  );
+}
+
+function MessageContent({
+  message,
+  onViewExpiring,
+}: {
+  message: Message;
+  onViewExpiring: () => void;
+}) {
+  if (message.expiring && message.type === "image") {
+    return <ExpiringImage message={message} onViewed={onViewExpiring} />;
+  }
   if (message.type === "image" || message.type === "gif") {
     return (
       <div className="relative h-48 w-48 overflow-hidden rounded-xl bg-black/20">
@@ -57,11 +115,13 @@ export default function ChatBubble({
   mine,
   onReact,
   onUnsend,
+  onViewExpiring,
 }: {
   message: Message;
   mine: boolean;
   onReact: (emoji: string) => void;
   onUnsend: () => void;
+  onViewExpiring: () => void;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   const [translated, setTranslated] = useState<string | null>(null);
@@ -114,7 +174,7 @@ export default function ChatBubble({
           {message.unsent ? (
             <p>Ce message a été supprimé.</p>
           ) : (
-            <MessageContent message={message} />
+            <MessageContent message={message} onViewExpiring={onViewExpiring} />
           )}
           {!message.unsent && !isMedia && (
             <p

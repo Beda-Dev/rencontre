@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { PinFlameLogo } from "@/components/icons";
 
-export const metadata = { title: "Conditions d'utilisation — Rencontre" };
+export const metadata = { title: "Conditions d'utilisation — Meets" };
 
 export default function TermsPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <Link href="/login" className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80">
         <PinFlameLogo className="h-5 w-5 text-blue-400" />
-        Rencontre
+        Meets
       </Link>
 
       <h1 className="mt-6 text-2xl font-semibold">Conditions d&apos;utilisation</h1>
@@ -16,8 +16,8 @@ export default function TermsPage() {
 
       <div className="mt-6 space-y-5 text-sm leading-relaxed text-white/70">
         <p>
-          <strong className="text-white">Rencontre</strong> est un prototype logiciel
-          fourni à but de démonstration et de développement, "tel quel", sans garantie
+          <strong className="text-white">Meets</strong> est un prototype logiciel
+          fourni à but de démonstration et de développement, &laquo;&nbsp;tel quel&nbsp;&raquo;, sans garantie
           d&apos;aucune sorte.
         </p>
 
@@ -26,7 +26,7 @@ export default function TermsPage() {
           <p>
             En mode démo, toutes les données affichées (profils, messages, photos)
             sont fictives et générées automatiquement — elles ne représentent aucune
-            personne réelle. En mode "API réelle", l&apos;application se comporte
+            personne réelle. En mode &laquo;&nbsp;API réelle&nbsp;&raquo;, l&apos;application se comporte
             comme un simple client pour le backend que tu configures et contrôles
             toi-même ; les présentes conditions ne couvrent pas ce backend.
           </p>

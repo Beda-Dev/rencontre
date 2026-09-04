@@ -11,6 +11,7 @@ import {
   MOCK_MANAGED_FIELDS,
   MOCK_ME,
   MOCK_MESSAGES,
+  MOCK_PHRASES,
   MOCK_PLACES,
   MOCK_PROFILES,
   MOCK_RIGHTNOW_POSTS,
@@ -36,12 +37,14 @@ import { fileToDataUrl } from "./mediaFile";
 import { translateText } from "./translate";
 import {
   AlistProfile,
+  BlockedProfile,
   BoostStatus,
   BoostType,
   CascadeParams,
   Conversation,
   DiscoverSection,
   Gif,
+  HiddenProfile,
   ManagedFields,
   Message,
   MessageMedia,
@@ -52,8 +55,11 @@ import {
   ProfileView,
   RightNowPost,
   RoamStatus,
+  SavedPhrase,
+  SearchParams,
   SpotifyTrack,
   TapStats,
+  TravelPlan,
   VipProfile,
 } from "./types";
 
@@ -78,6 +84,22 @@ const passedTopPickIds = new Set<string>();
 let myRightNowPost: RightNowPost | null = null;
 // In-memory only (mock mode): my Spotify favorites, mirroring POST /v4/spotify/favorites.
 let mySpotifyFavorites: SpotifyTrack[] = MOCK_SPOTIFY_CATALOG.slice(0, 3);
+// In-memory only (mock mode): "soft" hides, mirroring POST/DELETE /v1/hides.
+const hiddenIds = new Set<string>();
+// In-memory only (mock mode): muted/pinned/deleted conversations.
+const mutedConversationIds = new Set<string>();
+const pinnedConversationIds = new Set<string>();
+const deletedConversationIds = new Set<string>();
+// In-memory only (mock mode): last-read message id per conversation, mirroring
+// POST /v4/chat/conversation/{id}/read/{messageId}.
+const lastReadMessageId = new Map<string, string>();
+// In-memory only (mock mode): saved quick-reply phrases, mirroring /v1/chat/phrases.
+let phrases: SavedPhrase[] = MOCK_PHRASES.map((text, i) => ({ id: `p${i}`, text }));
+// In-memory only (mock mode): my scheduled travel plan, mirroring /v6/profiles/travel.
+let myTravelPlan: TravelPlan | null = null;
+// In-memory only (mock mode): accepted legal agreements, mirroring
+// GET/PUT /v3/me/legal-agreements.
+let legalAgreementsAccepted = false;
 
 function sleep(ms: number) {
   return new Promise((r) => setTimeout(r, ms));
@@ -87,7 +109,8 @@ function makeMessage(
   targetProfileId: string,
   type: Message["type"],
   body: string,
-  media: MessageMedia | null = null
+  media: MessageMedia | null = null,
+  expiring = false
 ): Message {
   return {
     messageId: `local-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
@@ -99,6 +122,8 @@ function makeMessage(
     media,
     reaction: null,
     unsent: false,
+    expiring,
+    viewed: false,
   };
 }
 
@@ -484,7 +509,18 @@ export const api = {
     const { useMock } = getConfig();
     if (useMock) {
       await sleep(DELAY);
-      return MOCK_CONVERSATIONS.filter((c) => !blockedIds.has(c.profileId));
+      const list = MOCK_CONVERSATIONS.filter(
+        (c) => !blockedIds.has(c.profileId) && !deletedConversationIds.has(c.profileId)
+      ).map((c) => ({
+        ...c,
+        // Marking a conversation as read (opening the thread) clears its
+        // badge; simplified vs. tracking exactly which messages came after
+        // a given read marker.
+        unreadCount: lastReadMessageId.has(c.profileId) ? 0 : c.unreadCount,
+        muted: mutedConversationIds.has(c.profileId),
+        pinned: pinnedConversationIds.has(c.profileId),
+      }));
+      return [...list].sort((a, b) => Number(b.pinned) - Number(a.pinned));
     }
     return request<{ entries: { data: Conversation }[] }>("/v4/inbox", {
       method: "POST",
@@ -529,12 +565,16 @@ export const api = {
 
   /** POST /v5|v6/chat/media/upload then a Text→Image message send, mirroring
    * SendImageBody { mediaId }. Mock mode skips the upload step entirely. */
-  async sendImageMessage(profileId: string, file: File): Promise<Message> {
+  async sendImageMessage(
+    profileId: string,
+    file: File,
+    expiring = false
+  ): Promise<Message> {
     const { useMock } = getConfig();
     if (useMock) {
       await sleep(DELAY);
       const url = await fileToDataUrl(file);
-      const msg = makeMessage(profileId, "image", "", { url });
+      const msg = makeMessage(profileId, "image", "", { url }, expiring);
       pushMockMessage(profileId, msg);
       return msg;
     }
@@ -543,12 +583,14 @@ export const api = {
       headers: { "Content-Type": file.type },
       body: file,
     });
+    // ExpiringImage per SendExpiringImageBody { mediaId, expiring: true };
+    // regular Image per SendImageBody { mediaId }.
     return request<Message>(`/v4/chat/message/send`, {
       method: "POST",
       body: JSON.stringify({
-        type: "Image",
+        type: expiring ? "ExpiringImage" : "Image",
         target: directTarget(profileId),
-        body: { mediaId },
+        body: expiring ? { mediaId, expiring: true } : { mediaId },
       }),
     });
   },
@@ -1165,5 +1207,392 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ trackIds: tracks.map((t) => t.id) }),
     });
+  },
+
+  // ---- Messages/conversations management ----------------------------------
+
+  /** POST /v4/chat/conversation/{conversationId}/read/{messageId}. */
+  async markConversationRead(profileId: string): Promise<void> {
+    const { useMock } = getConfig();
+    const msgs = (useMock ? MOCK_MESSAGES[profileId] : undefined) ?? [];
+    const lastId = msgs.length ? msgs[msgs.length - 1].messageId : "0";
+    if (useMock) {
+      await sleep(DELAY);
+      lastReadMessageId.set(profileId, lastId);
+      return;
+    }
+    await request(`/v4/chat/conversation/${profileId}/read/${lastId}`, {
+      method: "POST",
+    });
+  },
+
+  /** GET /v3.1/me/blocks — list of profiles you've blocked. */
+  async getBlockedProfiles(): Promise<BlockedProfile[]> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return [...blockedIds]
+        .map((id) => MOCK_PROFILES.find((p) => p.profileId === id))
+        .filter((p): p is ProfileDetail => !!p)
+        .map((p) => ({
+          profileId: p.profileId,
+          displayName: p.displayName,
+          profileImageMediaHash: p.profileImageMediaHash,
+          blockedTime: 0,
+        }));
+    }
+    return request<{ blocking: BlockedProfile[] }>("/v3.1/me/blocks").then(
+      (r) => r.blocking
+    );
+  },
+
+  /** DELETE /v3/me/blocks/{profileId} — undo a block. */
+  async unblockUser(profileId: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      blockedIds.delete(profileId);
+      return;
+    }
+    await request(`/v3/me/blocks/${profileId}`, { method: "DELETE" });
+  },
+
+  /**
+   * POST /v4/flags/{id} — report a profile. Body shape marked
+   * `UndocumentedObject`; reusing the legacy v3.1 shape `{ reason, comment }`
+   * (reason id from managed fields' reportReasons) since it's the closest
+   * confirmed precedent.
+   */
+  async reportProfile(profileId: string, reason: number, comment: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return;
+    }
+    await request(`/v4/flags/${profileId}`, {
+      method: "POST",
+      body: JSON.stringify({ reason, comment }),
+    });
+  },
+
+  /** POST/DELETE /v1/push/conversation/{conversationId}/mute|unmute. */
+  async setConversationMuted(profileId: string, muted: boolean): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      if (muted) mutedConversationIds.add(profileId);
+      else mutedConversationIds.delete(profileId);
+      return;
+    }
+    await request(`/v1/push/conversation/${profileId}/${muted ? "mute" : "unmute"}`, {
+      method: "POST",
+    });
+  },
+
+  /** POST/POST /v4/chat/conversation/{conversationId}/pin|unpin. */
+  async setConversationPinned(profileId: string, pinned: boolean): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      if (pinned) pinnedConversationIds.add(profileId);
+      else pinnedConversationIds.delete(profileId);
+      return;
+    }
+    await request(`/v4/chat/conversation/${profileId}/${pinned ? "pin" : "unpin"}`, {
+      method: "POST",
+    });
+  },
+
+  /** DELETE /v4/chat/conversation/{conversationId}. */
+  async deleteConversation(profileId: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      deletedConversationIds.add(profileId);
+      return;
+    }
+    await request(`/v4/chat/conversation/${profileId}`, { method: "DELETE" });
+  },
+
+  /** POST /v4/chat/message/delete — MessageMutationRequest; removes the
+   * message entirely for both sides (vs. unsendMessage, which leaves a
+   * "this message was unsent" placeholder). */
+  async deleteMessage(profileId: string, messageId: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      MOCK_MESSAGES[profileId] = (MOCK_MESSAGES[profileId] ?? []).filter(
+        (m) => m.messageId !== messageId
+      );
+      return;
+    }
+    await request(`/v4/chat/message/delete`, {
+      method: "POST",
+      body: JSON.stringify({ conversationId: profileId, messageId }),
+    });
+  },
+
+  /** GET /v5/chat/media/shared/images/with-me/{conversationId} — every
+   * image exchanged in a conversation, e.g. for a "shared media" gallery. */
+  async getSharedMedia(profileId: string): Promise<string[]> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return (MOCK_MESSAGES[profileId] ?? [])
+        .filter((m) => m.type === "image" && m.media && !m.unsent)
+        .map((m) => m.media!.url);
+    }
+    return request<{ images: { url: string }[] }>(
+      `/v5/chat/media/shared/images/with-me/${profileId}`
+    ).then((r) => r.images.map((i) => i.url));
+  },
+
+  /** Marks a viewed expiring image as seen — the real API tracks per-view
+   * budgets server-side; this mirrors that locally for the mock UI. */
+  markExpiringImageViewed(profileId: string, messageId: string): void {
+    const list = MOCK_MESSAGES[profileId] ?? [];
+    const msg = list.find((m) => m.messageId === messageId);
+    if (msg) msg.viewed = true;
+  },
+
+  /** GET /v1/chat/phrases, POST /v1/chat/phrases { text },
+   * DELETE /v1/me/prefs/phrases/{id} — saved quick-reply phrases. */
+  async getPhrases(): Promise<SavedPhrase[]> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return phrases;
+    }
+    return request<{ phrases: SavedPhrase[] }>("/v1/chat/phrases").then((r) => r.phrases);
+  },
+
+  async addPhrase(text: string): Promise<SavedPhrase> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      const phrase = { id: `p${Date.now()}`, text };
+      phrases = [...phrases, phrase];
+      return phrase;
+    }
+    return request<SavedPhrase>("/v1/chat/phrases", {
+      method: "POST",
+      body: JSON.stringify({ text }),
+    });
+  },
+
+  async deletePhrase(id: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      phrases = phrases.filter((p) => p.id !== id);
+      return;
+    }
+    await request(`/v1/me/prefs/phrases/${id}`, { method: "DELETE" });
+  },
+
+  // ---- Account & legal ------------------------------------------------------
+
+  /** POST /v3/users/email — { newEmail, password }. Body marked
+   * `UndocumentedObject`; this shape matches the legacy documented one. */
+  async changeEmail(newEmail: string, password: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      MOCK_ME.email = newEmail;
+      return;
+    }
+    await request("/v3/users/email", {
+      method: "POST",
+      body: JSON.stringify({ newEmail, password }),
+    });
+  },
+
+  /** POST /v3/users/update-password — { oldPassword, newPassword }. */
+  async changePassword(oldPassword: string, newPassword: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return;
+    }
+    await request("/v3/users/update-password", {
+      method: "POST",
+      body: JSON.stringify({ oldPassword, newPassword }),
+    });
+  },
+
+  /** POST /v3/users/forgot-password — { email }. */
+  async forgotPassword(email: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return;
+    }
+    await request("/v3/users/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  /** DELETE /v3/me/profile — permanently deletes the account server-side.
+   * Also forgets the account locally (same as removeAccount). */
+  async deleteAccount(): Promise<void> {
+    const { useMock } = getConfig();
+    const id = getActiveAccountId();
+    if (useMock) {
+      await sleep(DELAY);
+    } else {
+      await request("/v3/me/profile", { method: "DELETE" });
+    }
+    if (id) removeSavedAccount(id);
+    setSessionId(useMock ? "logged-out" : null);
+  },
+
+  /** GET /v3/me/legal-agreements. */
+  async getLegalAgreements(): Promise<{ accepted: boolean }> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return { accepted: legalAgreementsAccepted };
+    }
+    return request<{ accepted: boolean }>("/v3/me/legal-agreements");
+  },
+
+  /** PUT /v3/me/legal-agreements. */
+  async acceptLegalAgreements(): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      legalAgreementsAccepted = true;
+      return;
+    }
+    await request("/v3/me/legal-agreements", { method: "PUT" });
+  },
+
+  // ---- Search & hide ----------------------------------------------------
+
+  /**
+   * GET /v7/search — the real endpoint is filter-based (age/height/tribes/
+   * online/…), there's no free-text `q` param. Our mock adds a `query` text
+   * filter over displayName purely as a UI convenience; drop it if you proxy
+   * the real endpoint and translate `query` into real filter params instead.
+   */
+  async search(params: SearchParams): Promise<Profile[]> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      let results = MOCK_PROFILES.filter(
+        (p) => !blockedIds.has(p.profileId) && !hiddenIds.has(p.profileId)
+      ).map(toCascadeProfile);
+      const q = params.query?.trim().toLowerCase();
+      if (q) results = results.filter((p) => p.displayName?.toLowerCase().includes(q));
+      if (params.online) results = results.filter((p) => p.online);
+      if (params.ageMin != null) results = results.filter((p) => (p.age ?? 0) >= params.ageMin!);
+      if (params.ageMax != null) results = results.filter((p) => (p.age ?? 999) <= params.ageMax!);
+      return results;
+    }
+    const qs = new URLSearchParams();
+    if (params.online) qs.set("online", "true");
+    if (params.ageMin != null) qs.set("ageMinimum", String(params.ageMin));
+    if (params.ageMax != null) qs.set("ageMaximum", String(params.ageMax));
+    return request<{ profiles: Profile[] }>(`/v7/search?${qs}`).then((r) => r.profiles);
+  },
+
+  /** POST /v1/me/hides/{profileId} — softer than a block: silent, reversible,
+   * they just stop appearing in your cascade (real semantics may differ
+   * slightly — the documented direction is "they disappear from yours"). */
+  async hideProfile(profileId: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      hiddenIds.add(profileId);
+      return;
+    }
+    await request(`/v1/me/hides/${profileId}`, { method: "POST" });
+  },
+
+  /** DELETE /v1/hides/{profileId}. */
+  async unhideProfile(profileId: string): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      hiddenIds.delete(profileId);
+      return;
+    }
+    await request(`/v1/hides/${profileId}`, { method: "DELETE" });
+  },
+
+  /** GET /v1/hides. */
+  async getHiddenProfiles(): Promise<HiddenProfile[]> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return [...hiddenIds]
+        .map((id) => MOCK_PROFILES.find((p) => p.profileId === id))
+        .filter((p): p is ProfileDetail => !!p)
+        .map((p) => ({
+          profileId: p.profileId,
+          displayName: p.displayName,
+          profileImageMediaHash: p.profileImageMediaHash,
+        }));
+    }
+    return request<{ hides: HiddenProfile[] }>("/v1/hides").then((r) => r.hides);
+  },
+
+  // ---- Travel plans -------------------------------------------------------
+
+  /** GET /v6/profiles/travel/{profileId} — your own scheduled trip, if any. */
+  async getTravelPlan(): Promise<TravelPlan | null> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      return myTravelPlan;
+    }
+    const id = getActiveAccountId();
+    return request<TravelPlan | null>(`/v6/profiles/travel/${id}`);
+  },
+
+  /** POST /v6/profiles/travel — TravelPlanMutation { geohash, startDate,
+   * endDate, showOnProfile }. Distinct from Roam: this is a dated future
+   * trip shown as a badge ahead of time, not an instant cascade override. */
+  async setTravelPlan(
+    place: Place,
+    startDate: number,
+    endDate: number,
+    showOnProfile: boolean
+  ): Promise<TravelPlan> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      myTravelPlan = {
+        id: myTravelPlan?.id ?? `travel-${Date.now()}`,
+        place,
+        startDate,
+        endDate,
+        showOnProfile,
+      };
+      return myTravelPlan;
+    }
+    return request<TravelPlan>("/v6/profiles/travel", {
+      method: "POST",
+      body: JSON.stringify({
+        geohash: place.geohash,
+        startDate,
+        endDate,
+        showOnProfile,
+      }),
+    });
+  },
+
+  /** DELETE /v6/profiles/travel/{travelPlanId}. */
+  async deleteTravelPlan(): Promise<void> {
+    const { useMock } = getConfig();
+    if (useMock) {
+      await sleep(DELAY);
+      myTravelPlan = null;
+      return;
+    }
+    if (myTravelPlan) {
+      await request(`/v6/profiles/travel/${myTravelPlan.id}`, { method: "DELETE" });
+    }
   },
 };

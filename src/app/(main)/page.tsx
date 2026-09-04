@@ -51,7 +51,7 @@ export default function CascadePage() {
   return (
     <div className="mx-auto w-full max-w-5xl">
       <TopBar
-        title="Rencontre"
+        title="Meets"
         right={
           <div className="flex items-center gap-2">
             <FilterChip active={photoOnly} onClick={() => setPhotoOnly((v) => !v)}>

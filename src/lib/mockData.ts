@@ -216,6 +216,8 @@ function buildMessages(otherId: string): Message[] {
       media: null,
       reaction: null,
       unsent: false,
+      expiring: false,
+      viewed: false,
     },
     {
       messageId: `${otherId}-2`,
@@ -227,6 +229,8 @@ function buildMessages(otherId: string): Message[] {
       media: null,
       reaction: null,
       unsent: false,
+      expiring: false,
+      viewed: false,
     },
     {
       messageId: `${otherId}-3`,
@@ -238,6 +242,8 @@ function buildMessages(otherId: string): Message[] {
       media: null,
       reaction: null,
       unsent: false,
+      expiring: false,
+      viewed: false,
     },
   ];
 }
@@ -258,9 +264,18 @@ export const MOCK_CONVERSATIONS: Conversation[] = MOCK_PROFILES.slice(0, 8).map(
       lastMessageTimestamp: last.timestamp,
       unreadCount: last.sourceProfileId === p.profileId ? 1 : 0,
       online: p.online,
+      muted: false,
+      pinned: false,
     };
   }
 );
+
+export const MOCK_PHRASES = [
+  "Salut, ça va ?",
+  "T'es dispo là ?",
+  "On se voit où ?",
+  "Photo récente ?",
+];
 
 export const MOCK_VIEWS: ProfileView[] = MOCK_PROFILES.slice(3, 13).map((p, i) => ({
   ...toCascadeProfile(p),
@@ -316,7 +331,7 @@ const ALL_CASCADE: Profile[] = MOCK_PROFILES.map(toCascadeProfile);
 
 export function buildDiscoverSections(): DiscoverSection[] {
   return [
-    { id: "new", title: "Nouveaux sur Rencontre", profiles: ALL_CASCADE.slice(0, 6) },
+    { id: "new", title: "Nouveaux sur Meets", profiles: ALL_CASCADE.slice(0, 6) },
     {
       id: "online",
       title: "En ligne maintenant",

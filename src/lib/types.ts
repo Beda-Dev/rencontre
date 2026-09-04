@@ -67,6 +67,10 @@ export interface Message {
   media: MessageMedia | null;
   reaction: string | null;
   unsent: boolean;
+  /** ExpiringImage — SendExpiringImageBody { mediaId, expiring: true }. */
+  expiring: boolean;
+  /** Once true, an expiring image should render as "already viewed". */
+  viewed: boolean;
 }
 
 /** GET /v1/gifs/search, /v1/gifs/trending — modeled on GiphyBody. */
@@ -91,6 +95,8 @@ export interface Conversation {
   lastMessageTimestamp: number;
   unreadCount: number;
   online: boolean;
+  muted: boolean;
+  pinned: boolean;
 }
 
 export interface SessionResponse {
@@ -186,4 +192,44 @@ export interface SpotifyTrack {
   id: string;
   title: string;
   artist: string;
+}
+
+/** GET /v1/chat/phrases — saved quick-reply phrases. */
+export interface SavedPhrase {
+  id: string;
+  text: string;
+}
+
+/**
+ * A scheduled future trip (POST /v6/profiles/travel) — distinct from Roam:
+ * Roam changes where the cascade shows you *right now*; a travel plan is a
+ * dated future visit, shown as a badge on your profile ahead of time.
+ */
+export interface TravelPlan {
+  id: string;
+  place: Place;
+  startDate: number; // unix ms
+  endDate: number; // unix ms
+  showOnProfile: boolean;
+}
+
+/** GET /v3.1/me/blocks — the reverse of blocking someone (POST /v3/me/blocks/{id}). */
+export interface BlockedProfile {
+  profileId: string;
+  displayName: string | null;
+  profileImageMediaHash: string | null;
+  blockedTime: number;
+}
+
+/** GET /v1/hides — softer than a block: you disappear from their cascade
+ * (mocked here as: they disappear from yours), reversible, silent. */
+export type HiddenProfile = Pick<Profile, "profileId" | "displayName" | "profileImageMediaHash">;
+
+/** GET /v7/search — real endpoint is filter-based (age/height/tribes/…),
+ * not free-text; our mock adds a `query` text filter as a UI convenience. */
+export interface SearchParams {
+  query?: string;
+  ageMin?: number;
+  ageMax?: number;
+  online?: boolean;
 }

@@ -2,8 +2,8 @@ import type { MetadataRoute } from "next";
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: "Rencontre — prototype (données factices)",
-    short_name: "Rencontre",
+    name: "Meets — prototype (données factices)",
+    short_name: "Meets",
     description: "Prototype d'interface style app de rencontre — données factices",
     start_url: "/",
     scope: "/",

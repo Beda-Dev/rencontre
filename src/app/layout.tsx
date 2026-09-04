@@ -15,12 +15,12 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Rencontre",
+  title: "Meets",
   description: "Prototype d'interface style app de rencontre — données factices",
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Rencontre",
+    title: "Meets",
   },
 };
 

@@ -9,7 +9,15 @@
 //   guessing what to re-fetch
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api } from "./api";
-import { BoostType, CascadeParams, Gif, MyProfile, Place, SpotifyTrack } from "./types";
+import {
+  BoostType,
+  CascadeParams,
+  Gif,
+  MyProfile,
+  Place,
+  SearchParams,
+  SpotifyTrack,
+} from "./types";
 
 export const queryKeys = {
   me: ["me"] as const,
@@ -34,6 +42,13 @@ export const queryKeys = {
   spotify: (profileId: string) => ["spotify", profileId] as const,
   spotifyCatalog: ["spotifyCatalog"] as const,
   accounts: ["accounts"] as const,
+  blockedProfiles: ["blockedProfiles"] as const,
+  hiddenProfiles: ["hiddenProfiles"] as const,
+  phrases: ["phrases"] as const,
+  sharedMedia: (id: string) => ["sharedMedia", id] as const,
+  travelPlan: ["travelPlan"] as const,
+  legalAgreements: ["legalAgreements"] as const,
+  search: (params: SearchParams) => ["search", params] as const,
 };
 
 export function useMeQuery() {
@@ -223,7 +238,8 @@ function useMessageMediaMutation<T extends unknown[]>(
 export function useSendImageMessageMutation(profileId: string) {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (file: File) => api.sendImageMessage(profileId, file),
+    mutationFn: ({ file, expiring }: { file: File; expiring?: boolean }) =>
+      api.sendImageMessage(profileId, file, expiring),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: queryKeys.messages(profileId) });
       qc.invalidateQueries({ queryKey: queryKeys.conversations });
@@ -369,5 +385,210 @@ export function useRemoveAccountMutation() {
   return useMutation({
     mutationFn: async (profileId: string) => api.removeAccount(profileId),
     onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.accounts }),
+  });
+}
+
+// ---- Messages/conversations management -----------------------------------
+
+export function useMarkConversationReadMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => api.markConversationRead(profileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.conversations }),
+  });
+}
+
+export function useBlockedProfilesQuery() {
+  return useQuery({ queryKey: queryKeys.blockedProfiles, queryFn: api.getBlockedProfiles });
+}
+
+export function useUnblockUserMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => api.unblockUser(profileId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.blockedProfiles });
+      qc.invalidateQueries({ queryKey: ["cascade"] });
+    },
+  });
+}
+
+export function useReportProfileMutation() {
+  return useMutation({
+    mutationFn: ({ profileId, reason, comment }: { profileId: string; reason: number; comment: string }) =>
+      api.reportProfile(profileId, reason, comment),
+  });
+}
+
+export function useSetConversationMutedMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ profileId, muted }: { profileId: string; muted: boolean }) =>
+      api.setConversationMuted(profileId, muted),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.conversations }),
+  });
+}
+
+export function useSetConversationPinnedMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ profileId, pinned }: { profileId: string; pinned: boolean }) =>
+      api.setConversationPinned(profileId, pinned),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.conversations }),
+  });
+}
+
+export function useDeleteConversationMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => api.deleteConversation(profileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.conversations }),
+  });
+}
+
+export function useDeleteMessageMutation(profileId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (messageId: string) => api.deleteMessage(profileId, messageId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.messages(profileId) }),
+  });
+}
+
+export function useMarkExpiringImageViewedMutation(profileId: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (messageId: string) =>
+      api.markExpiringImageViewed(profileId, messageId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.messages(profileId) }),
+  });
+}
+
+export function useSharedMediaQuery(profileId: string) {
+  return useQuery({
+    queryKey: queryKeys.sharedMedia(profileId),
+    queryFn: () => api.getSharedMedia(profileId),
+  });
+}
+
+export function usePhrasesQuery() {
+  return useQuery({ queryKey: queryKeys.phrases, queryFn: api.getPhrases });
+}
+
+export function useAddPhraseMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (text: string) => api.addPhrase(text),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.phrases }),
+  });
+}
+
+export function useDeletePhraseMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => api.deletePhrase(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.phrases }),
+  });
+}
+
+// ---- Account & legal -------------------------------------------------------
+
+export function useChangeEmailMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ newEmail, password }: { newEmail: string; password: string }) =>
+      api.changeEmail(newEmail, password),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.me }),
+  });
+}
+
+export function useChangePasswordMutation() {
+  return useMutation({
+    mutationFn: ({ oldPassword, newPassword }: { oldPassword: string; newPassword: string }) =>
+      api.changePassword(oldPassword, newPassword),
+  });
+}
+
+export function useForgotPasswordMutation() {
+  return useMutation({ mutationFn: (email: string) => api.forgotPassword(email) });
+}
+
+export function useDeleteAccountMutation() {
+  return useMutation({ mutationFn: () => api.deleteAccount() });
+}
+
+export function useLegalAgreementsQuery() {
+  return useQuery({ queryKey: queryKeys.legalAgreements, queryFn: api.getLegalAgreements });
+}
+
+export function useAcceptLegalAgreementsMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.acceptLegalAgreements(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.legalAgreements }),
+  });
+}
+
+// ---- Search & hide ----------------------------------------------------
+
+export function useSearchQuery(params: SearchParams) {
+  return useQuery({
+    queryKey: queryKeys.search(params),
+    queryFn: () => api.search(params),
+    enabled: !!params.query || params.online != null,
+  });
+}
+
+export function useHideProfileMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => api.hideProfile(profileId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: queryKeys.hiddenProfiles });
+      qc.invalidateQueries({ queryKey: ["cascade"] });
+    },
+  });
+}
+
+export function useUnhideProfileMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (profileId: string) => api.unhideProfile(profileId),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.hiddenProfiles }),
+  });
+}
+
+export function useHiddenProfilesQuery() {
+  return useQuery({ queryKey: queryKeys.hiddenProfiles, queryFn: api.getHiddenProfiles });
+}
+
+// ---- Travel plans -----------------------------------------------------
+
+export function useTravelPlanQuery() {
+  return useQuery({ queryKey: queryKeys.travelPlan, queryFn: api.getTravelPlan });
+}
+
+export function useSetTravelPlanMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({
+      place,
+      startDate,
+      endDate,
+      showOnProfile,
+    }: {
+      place: Place;
+      startDate: number;
+      endDate: number;
+      showOnProfile: boolean;
+    }) => api.setTravelPlan(place, startDate, endDate, showOnProfile),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.travelPlan }),
+  });
+}
+
+export function useDeleteTravelPlanMutation() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: () => api.deleteTravelPlan(),
+    onSuccess: () => qc.invalidateQueries({ queryKey: queryKeys.travelPlan }),
   });
 }

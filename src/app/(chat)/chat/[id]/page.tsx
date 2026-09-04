@@ -9,26 +9,38 @@ import { connectConversation } from "@/lib/realtime";
 import {
   queryKeys,
   useBlockUserMutation,
+  useConversationsQuery,
+  useDeleteConversationMutation,
+  useMarkConversationReadMutation,
+  useMarkExpiringImageViewedMutation,
   useMessagesQuery,
   useProfileQuery,
   useReactToMessageMutation,
+  useReportProfileMutation,
   useSendAudioMessageMutation,
   useSendGifMessageMutation,
   useSendImageMessageMutation,
   useSendMessageMutation,
   useSendVideoMessageMutation,
+  useSetConversationMutedMutation,
+  useSetConversationPinnedMutation,
   useUnsendMessageMutation,
 } from "@/lib/queries";
 import { Message } from "@/lib/types";
 import { useMediaRecorder } from "@/lib/useMediaRecorder";
 import ChatBubble from "@/components/ChatBubble";
+import ChatMenu from "@/components/ChatMenu";
 import GifPicker from "@/components/GifPicker";
+import PhrasesBar from "@/components/PhrasesBar";
+import SharedMediaSheet from "@/components/SharedMediaSheet";
+import ImageViewer from "@/components/ImageViewer";
 import CameraPreview from "@/components/CameraPreview";
 import VideoCallOverlay from "@/components/VideoCallOverlay";
 import {
   BackIcon,
   BlockIcon,
   CameraIcon,
+  ClockIcon,
   CloseIcon,
   GifIcon,
   MicIcon,
@@ -45,6 +57,8 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
   const qc = useQueryClient();
   const { data: profile } = useProfileQuery(id);
   const { data: messages } = useMessagesQuery(id);
+  const { data: conversations } = useConversationsQuery();
+  const conversation = conversations?.find((c) => c.profileId === id);
   const sendMessage = useSendMessageMutation(id);
   const sendImage = useSendImageMessageMutation(id);
   const sendGif = useSendGifMessageMutation(id);
@@ -53,13 +67,26 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
   const reactToMessage = useReactToMessageMutation(id);
   const unsendMessage = useUnsendMessageMutation(id);
   const blockUser = useBlockUserMutation();
+  const markRead = useMarkConversationReadMutation();
+  const markExpiringViewed = useMarkExpiringImageViewedMutation(id);
+  const setMuted = useSetConversationMutedMutation();
+  const setPinned = useSetConversationPinnedMutation();
+  const deleteConversation = useDeleteConversationMutation();
+  const reportProfile = useReportProfileMutation();
   const [draft, setDraft] = useState("");
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
   const [inCall, setInCall] = useState(false);
+  const [expiringNext, setExpiringNext] = useState(false);
+  const [sharedMediaOpen, setSharedMediaOpen] = useState(false);
+  const [viewerIndex, setViewerIndex] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const audioRecorder = useMediaRecorder("audio");
   const videoRecorder = useMediaRecorder("video");
+
+  const sharedImages = (messages ?? [])
+    .filter((m) => m.type === "image" && m.media && !m.unsent && !m.expiring)
+    .map((m) => m.media!.url);
 
   // Realtime: live incoming messages over the (mock or real) WebSocket layer,
   // merged straight into the query cache so the list re-renders like any
@@ -73,6 +100,12 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
     });
     return () => conn.close();
   }, [id, qc]);
+
+  // Opening a thread marks it read (POST /v4/chat/conversation/{id}/read/{messageId}).
+  useEffect(() => {
+    markRead.mutate(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -89,7 +122,10 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
   async function handleFileChange(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     e.target.value = "";
-    if (file) await sendImage.mutateAsync(file);
+    if (file) {
+      await sendImage.mutateAsync({ file, expiring: expiringNext });
+      setExpiringNext(false);
+    }
   }
 
   async function handleStopAudio() {
@@ -106,6 +142,19 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
     if (!profile) return;
     if (!window.confirm(`Bloquer ${profile.displayName ?? "ce profil"} ?`)) return;
     await blockUser.mutateAsync(profile.profileId);
+    router.replace("/chat");
+  }
+
+  async function handleReport() {
+    if (!profile) return;
+    if (!window.confirm(`Signaler ${profile.displayName ?? "ce profil"} ?`)) return;
+    await reportProfile.mutateAsync({ profileId: profile.profileId, reason: 3, comment: "Spam" });
+    window.alert("Signalement envoyé.");
+  }
+
+  async function handleDeleteConversation() {
+    if (!window.confirm("Supprimer cette conversation ?")) return;
+    await deleteConversation.mutateAsync(id);
     router.replace("/chat");
   }
 
@@ -142,6 +191,19 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
             >
               <BlockIcon className="h-5 w-5" />
             </button>
+            <ChatMenu
+              muted={conversation?.muted ?? false}
+              pinned={conversation?.pinned ?? false}
+              onToggleMute={() =>
+                setMuted.mutate({ profileId: id, muted: !(conversation?.muted ?? false) })
+              }
+              onTogglePin={() =>
+                setPinned.mutate({ profileId: id, pinned: !(conversation?.pinned ?? false) })
+              }
+              onDelete={handleDeleteConversation}
+              onReport={handleReport}
+              onSharedMedia={() => setSharedMediaOpen(true)}
+            />
           </>
         )}
       </header>
@@ -156,6 +218,7 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
               reactToMessage.mutate({ messageId: m.messageId, emoji: emoji || null })
             }
             onUnsend={() => unsendMessage.mutate(m.messageId)}
+            onViewExpiring={() => markExpiringViewed.mutate(m.messageId)}
           />
         ))}
         <div ref={bottomRef} />
@@ -186,6 +249,8 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
           </div>
         </div>
       )}
+
+      <PhrasesBar onPick={(text) => sendMessage.mutate(text)} />
 
       <form
         onSubmit={handleSend}
@@ -240,6 +305,16 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
             </button>
             <button
               type="button"
+              onClick={() => setExpiringNext((v) => !v)}
+              title={expiringNext ? "Prochaine photo : durée limitée (activé)" : "Rendre la prochaine photo éphémère"}
+              className={`shrink-0 rounded-full p-2 ${
+                expiringNext ? "bg-blue-400 text-black" : "text-white/60 hover:text-blue-400"
+              }`}
+            >
+              <ClockIcon className="h-5 w-5" />
+            </button>
+            <button
+              type="button"
               onClick={() => setGifPickerOpen((v) => !v)}
               className="shrink-0 rounded-full p-2 text-white/60 hover:text-blue-400"
               title="Envoyer un GIF"
@@ -288,6 +363,23 @@ export default function ChatThreadPage(props: PageProps<"/chat/[id]">) {
         <VideoCallOverlay
           displayName={profile.displayName ?? "—"}
           onEnd={() => setInCall(false)}
+        />
+      )}
+
+      {sharedMediaOpen && (
+        <SharedMediaSheet
+          profileId={id}
+          onClose={() => setSharedMediaOpen(false)}
+          onOpenImage={(i) => setViewerIndex(i)}
+        />
+      )}
+
+      {viewerIndex !== null && (
+        <ImageViewer
+          urls={sharedImages}
+          index={viewerIndex}
+          onIndexChange={setViewerIndex}
+          onClose={() => setViewerIndex(null)}
         />
       )}
     </div>

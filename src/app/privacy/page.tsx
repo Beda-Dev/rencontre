@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { PinFlameLogo } from "@/components/icons";
 
-export const metadata = { title: "Politique de confidentialité — Rencontre" };
+export const metadata = { title: "Politique de confidentialité — Meets" };
 
 export default function PrivacyPage() {
   return (
     <div className="mx-auto max-w-2xl px-6 py-10">
       <Link href="/login" className="flex items-center gap-2 text-sm text-white/50 hover:text-white/80">
         <PinFlameLogo className="h-5 w-5 text-blue-400" />
-        Rencontre
+        Meets
       </Link>
 
       <h1 className="mt-6 text-2xl font-semibold">Politique de confidentialité</h1>
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
 
       <div className="mt-6 space-y-5 text-sm leading-relaxed text-white/70">
         <p>
-          <strong className="text-white">Rencontre</strong> est un prototype d&apos;interface
+          <strong className="text-white">Meets</strong> est un prototype d&apos;interface
           de type application de rencontre, à but de démonstration/développement. Il
           n&apos;est affilié à aucun service commercial existant.
         </p>
@@ -33,7 +33,7 @@ export default function PrivacyPage() {
         </section>
 
         <section>
-          <h2 className="mb-1 font-medium text-white">Mode "API réelle"</h2>
+          <h2 className="mb-1 font-medium text-white">Mode &laquo;&nbsp;API réelle&nbsp;&raquo;</h2>
           <p>
             Si tu configures toi-même une URL de backend (dans les réglages de
             connexion), l&apos;application envoie tes requêtes à cette adresse — que tu
@@ -47,7 +47,7 @@ export default function PrivacyPage() {
         <section>
           <h2 className="mb-1 font-medium text-white">Connexion avec Google</h2>
           <p>
-            Si tu utilises "Continuer avec Google", l&apos;application obtient un code
+            Si tu utilises &laquo;&nbsp;Continuer avec Google&nbsp;&raquo;, l&apos;application obtient un code
             d&apos;autorisation via le SDK officiel de Google (Google Identity
             Services). Ce code est transmis à ton propre backend configuré — jamais à
             un tiers autre que Google et ce backend. Nous ne stockons ni ne consultons

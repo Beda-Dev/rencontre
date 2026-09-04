@@ -60,6 +60,8 @@ export function connectConversation(
           media: null,
           reaction: null,
           unsent: false,
+          expiring: false,
+          viewed: false,
         });
       },
       8000 + Math.random() * 12000
@@ -132,6 +134,8 @@ export function connectGlobalEvents(onEvent: GlobalHandler): RealtimeConnection 
               media: null,
               reaction: null,
               unsent: false,
+              expiring: false,
+              viewed: false,
             },
           });
         } else {
